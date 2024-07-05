@@ -1,0 +1,18 @@
+let foo = 42
+
+let cheese = if foo > 3 then "bar" else "baz" end
+
+if foo > 3 and bar == 4 then
+    cheese()
+end
+
+if foo >= 3 and bar is 4 then
+    cheese()
+end
+
+if baz = 3 > cheese() then
+    selfDestruct(baz)
+end
+
+
+assertEqual(baz, 3)

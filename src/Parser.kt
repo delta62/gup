@@ -2,19 +2,153 @@ import TokenType.*
 
 class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
-
     private var current: Int = 0
 
-    fun parse(): Expr? {
-        return try {
-            expression()
-        } catch (error: ParseError) {
-            null
+    fun parse(): List<Stmt> {
+        val statements = ArrayList<Stmt>()
+        while (!isAtEnd()) {
+            val declaration = declaration()
+            if (declaration != null) statements.add(declaration)
         }
+
+        return statements
     }
 
     private fun expression(): Expr {
-        return equality()
+        return assignment()
+    }
+
+    private fun declaration(): Stmt? {
+        try {
+            if (match(LET)) return letDeclaration()
+            return statement()
+        } catch (error: ParseError) {
+            synchronize()
+            return null
+        }
+    }
+
+    private fun statement(): Stmt {
+        if (check(BREAK)) return breakStatement()
+        if (match(CONTINUE)) return continueStatement()
+        if (match(FOR)) return forStatement()
+        if (match(IF)) return ifStatement()
+        if (match(PRINT)) return printStatement()
+        if (match(WHILE)) return whileStatement()
+        if (match(LOOP)) return loopStatement()
+        if (match(DO)) return Stmt.Block(block())
+        return expressionStatement()
+    }
+
+    private fun breakStatement(): Stmt {
+        return Stmt.Break(consume(BREAK, "Expected 'break'"))
+    }
+
+    private fun continueStatement(): Stmt {
+//        return Stmt.Continue()
+        TODO()
+    }
+
+    private fun forStatement(): Stmt {
+        val name = consume(IDENTIFIER, "Expected local binding in for statement")
+        consume(IN, "Expected 'in' in for statement")
+        val iterable = consume(IDENTIFIER, "Expected iterable in for statement")
+        val body = statement()
+
+        return Stmt.ForLoop(name, iterable, body)
+    }
+
+    private fun ifStatement(): Stmt {
+        val condition = expression()
+        consume(THEN, "Expected 'then' after if expression")
+
+        val thenBranch = statement()
+        val elseBranch = if (match(ELSE)) statement() else null
+
+        return Stmt.If(condition, thenBranch, elseBranch)
+    }
+
+    private fun printStatement(): Stmt {
+        val value = expression()
+        return Stmt.Print(value)
+    }
+
+    private fun whileStatement(): Stmt {
+        val condition = expression()
+        val body = statement()
+
+        return Stmt.While(condition, body)
+    }
+
+    private fun loopStatement(): Stmt {
+        val body = statement()
+        return Stmt.Loop(body)
+    }
+
+    private fun letDeclaration(): Stmt {
+        val name = consume(IDENTIFIER, "Expected a variable name")
+        var initializer: Expr? = null
+        if (match(EQ)) initializer = expression()
+
+        return Stmt.Let(name, initializer)
+    }
+
+    private fun expressionStatement(): Stmt {
+        val expr = expression()
+        return Stmt.Expression(expr)
+    }
+
+    private fun block(): List<Stmt> {
+        val statements = ArrayList<Stmt>()
+        while (!check(END) && !isAtEnd()) {
+            val declaration = declaration()
+            if (declaration != null) statements.add(declaration)
+        }
+
+        consume(END, "Expected 'end' after block")
+        return statements
+    }
+
+    private fun assignment(): Expr {
+        val expr = or()
+
+        if (match(EQ)) {
+            val equals = previous()
+            val value = assignment()
+
+            if (expr is Expr.Variable) {
+                val name = expr.name
+                return Expr.Assign(name, value)
+            }
+
+            error(equals, "Invalid assignment target")
+        }
+
+        return expr
+    }
+
+    private fun or(): Expr {
+        var expr = and()
+
+        while (match(OR)) {
+            val operator = previous()
+            val right = and()
+            expr = Expr.Logical(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun and(): Expr {
+        var expr = equality()
+
+        while (match(AND)) {
+            val operator = previous()
+            val right = equality()
+            expr = Expr.Logical(expr, operator, right)
+        }
+
+        return expr
     }
 
     private fun equality(): Expr {
@@ -81,6 +215,10 @@ class Parser(private val tokens: List<Token>) {
 
         if (match(NUMBER, STRING)) {
             return Expr.Literal(previous().literal!!)
+        }
+
+        if (match(IDENTIFIER)) {
+            return Expr.Variable(previous())
         }
 
         if (match(LEFT_PAREN)) {
