@@ -18,6 +18,8 @@ class Scanner(private val source: String) {
             "false" to FALSE,
             "for" to FOR,
             "if" to IF,
+            "is" to IS,
+            "isnt" to ISNT,
             "let" to LET,
             "loop" to LOOP,
             "or" to OR,
@@ -25,6 +27,7 @@ class Scanner(private val source: String) {
             "print" to PRINT,
             "return" to RETURN,
             "struct" to STRUCT,
+            "then" to THEN,
             "true" to TRUE,
             "where" to WHERE,
             "while" to WHILE,
@@ -54,8 +57,9 @@ class Scanner(private val source: String) {
             '-' -> addToken(MINUS)
             '+' -> addToken(PLUS)
             '*' -> addToken(STAR)
-            '!' -> addToken(if (match('=')) BANG_EQ else BANG)
-            '=' -> addToken(if (match('=')) EQ_EQ else EQ)
+            '=' -> addToken(EQ)
+            '|' -> addToken(PIPE)
+            '&' -> addToken(AMPERSAND)
             '<' -> addToken(if (match('=')) LESS_EQ else LESS)
             '>' -> addToken(if (match('=')) GREATER_EQ else GREATER)
             '/' -> {

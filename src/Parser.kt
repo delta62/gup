@@ -34,6 +34,7 @@ class Parser(private val tokens: List<Token>) {
         if (match(FOR)) return forStatement()
         if (match(IF)) return ifStatement()
         if (match(PRINT)) return printStatement()
+        if (match(RETURN)) return returnStatement()
         if (match(WHILE)) return whileStatement()
         if (match(LOOP)) return loopStatement()
         if (match(DO)) return Stmt.Block(block())
@@ -45,8 +46,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun continueStatement(): Stmt {
-//        return Stmt.Continue()
-        TODO()
+        return Stmt.Continue(consume(CONTINUE, "Expected 'continue'"))
     }
 
     private fun forStatement(): Stmt {
@@ -64,6 +64,7 @@ class Parser(private val tokens: List<Token>) {
 
         val thenBranch = statement()
         val elseBranch = if (match(ELSE)) statement() else null
+        consume(END, "Expected 'end' after if expression")
 
         return Stmt.If(condition, thenBranch, elseBranch)
     }
@@ -71,6 +72,13 @@ class Parser(private val tokens: List<Token>) {
     private fun printStatement(): Stmt {
         val value = expression()
         return Stmt.Print(value)
+    }
+
+    private fun returnStatement(): Stmt {
+        val keyword = previous()
+        val value = expression()
+
+        return Stmt.Return(keyword, value)
     }
 
     private fun whileStatement(): Stmt {
@@ -154,7 +162,7 @@ class Parser(private val tokens: List<Token>) {
     private fun equality(): Expr {
         var expr = comparison()
 
-        while (match(BANG_EQ, EQ_EQ)) {
+        while (match(IS, ISNT)) {
             val operator = previous()
             val right = comparison()
             expr = Expr.Binary(expr, operator, right)
@@ -200,18 +208,51 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun unary(): Expr {
-        if (match(BANG, MINUS)) {
+        if (match(NOT, MINUS)) {
             val operator = previous()
             val right = unary()
             return Expr.Unary(operator, right)
         }
 
-        return primary()
+        return call()
+    }
+
+    private fun call(): Expr {
+        var expr = primary()
+
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr)
+            } else {
+                break
+            }
+        }
+
+        return expr
+    }
+
+    private fun finishCall(callee: Expr): Expr {
+        val arguments = ArrayList<Expr>()
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size > 255) {
+                    error(peek(), "Can't have more than 255 arguments")
+                }
+                arguments.add(expression())
+            } while (match(COMMA))
+        }
+
+        val paren = consume(RIGHT_PAREN, "Expected ')' after arguments")
+        return Expr.Call(callee, paren, arguments)
     }
 
     private fun primary(): Expr {
         if (match(FALSE)) return Expr.Literal(false)
         if (match(TRUE)) return Expr.Literal(true)
+
+        if (match(PIPE)) {
+            return functionDefinition()
+        }
 
         if (match(NUMBER, STRING)) {
             return Expr.Literal(previous().literal!!)
@@ -228,6 +269,25 @@ class Parser(private val tokens: List<Token>) {
         }
 
         throw error(peek(), "Expected an expression")
+    }
+
+    private fun functionDefinition(): Expr {
+        val params = ArrayList<Token>()
+        if (!check(PIPE)) {
+            do {
+                if (params.size > 255)  {
+                    error(peek(), "Can't have more than 255 parameters")
+                }
+
+                params.add(consume(IDENTIFIER, "Expected parameter name"))
+            } while (match(COMMA))
+        }
+
+        consume(PIPE, "Expected '|' after parameters")
+        consume(DO, "Expected 'do' before function body")
+        val body = block()
+
+        return Expr.Function(params, body)
     }
 
     private fun match(vararg types: TokenType): Boolean {

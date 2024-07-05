@@ -1,24 +1,22 @@
 enum class TokenType {
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
+    LEFT_PAREN, RIGHT_PAREN,
+    LEFT_BRACE, RIGHT_BRACE,
     COMMA,
     DOT,
-    MINUS,
-    PLUS,
-    SLASH,
-    STAR,
+    MINUS, PLUS,
+    SLASH, STAR,
     COLON,
 
-    BANG,
-    BANG_EQ,
     EQ,
-    EQ_EQ,
+    IS,
+    ISNT,
+    NOT,
     GREATER,
     GREATER_EQ,
     LESS,
     LESS_EQ,
+
+    PIPE, AMPERSAND,
 
     IDENTIFIER, STRING, NUMBER,
 

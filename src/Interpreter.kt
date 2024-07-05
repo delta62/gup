@@ -1,10 +1,21 @@
 import TokenType.*
 
 class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
-    private var environment = Environment()
-    private var inLoop = false
-    private var breakingLoop = false
-    private var continuingLoop = false
+    internal val globals = Environment()
+    private var environment = globals
+    private var loopState = LoopState.NoLoop
+
+    init {
+        globals.define("clock", object : Callable {
+            override fun arity(): Int {
+                return 0
+            }
+
+            override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
+                return System.currentTimeMillis().toDouble() / 1000.0
+            }
+        })
+    }
 
     fun interpret(statements: List<Stmt>) {
         try {
@@ -68,10 +79,33 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 left as Double <= right as Double
             }
 
-            BANG_EQ -> !isEqual(left, right)
-            EQ_EQ -> isEqual(left, right)
+            ISNT -> !isEqual(left, right)
+            IS -> isEqual(left, right)
             else -> TODO("unreachable")
         }
+    }
+
+    override fun visitCallExpr(expr: Expr.Call): Any {
+        val callee = evaluate(expr.callee)
+
+        val arguments = ArrayList<Any>()
+        for (argument in expr.arguments) {
+            arguments.add(evaluate(argument))
+        }
+
+        if (callee !is Callable) {
+            throw RuntimeError(expr.paren, "Can only call functions")
+        }
+
+        if (arguments.size != callee.arity()) {
+            throw RuntimeError(expr.paren, "Expected ${callee.arity()} arguments but got ${arguments.size}")
+        }
+
+        return callee.call(this, arguments)
+    }
+
+    override fun visitFunctionExpr(expr: Expr.Function): Any {
+        return Function(expr)
     }
 
     override fun visitGroupingExpr(expr: Expr.Grouping): Any {
@@ -85,7 +119,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     override fun visitLogicalExpr(expr: Expr.Logical): Any {
         val left = evaluate(expr.left)
 
-        if (expr.operator.type == TokenType.OR) {
+        if (expr.operator.type == OR) {
             if (left == true) return left
         } else {
             if (left == true) return left
@@ -98,7 +132,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         val right = evaluate(expr.right)
 
         return when (expr.operator.type) {
-            BANG -> !(right as Boolean)
+            NOT -> !(right as Boolean)
             MINUS -> {
                 checkNumberOperand(expr.operator, right)
                 -(right as Double)
@@ -131,7 +165,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         stmt.accept(this)
     }
 
-    private fun executeBlock(statements: List<Stmt>, environment: Environment) {
+    internal fun executeBlock(statements: List<Stmt>, environment: Environment) {
         val previous = this.environment
         try {
             this.environment = environment
@@ -165,13 +199,13 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     }
 
     override fun visitBreakStmt(stmt: Stmt.Break) {
-        if (!inLoop) throw RuntimeError(stmt.token, "Cannot break outside of loops")
-        breakingLoop = true
+        if (loopState != LoopState.InLoop) throw RuntimeError(stmt.token, "Cannot break outside of loops")
+        loopState = LoopState.BrokenLoop
     }
 
     override fun visitContinueStmt(stmt: Stmt.Continue) {
-        if (!inLoop) throw RuntimeError(stmt.token, "Cannot continue outside of loops")
-        continuingLoop = true
+        if (loopState != LoopState.InLoop) throw RuntimeError(stmt.token, "Cannot continue outside of loops")
+        loopState = LoopState.ContinuedLoop
     }
 
     override fun visitExpressionStmt(stmt: Stmt.Expression) {
@@ -195,6 +229,13 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         println(stringify(value))
     }
 
+    override fun visitReturnStmt(stmt: Stmt.Return) {
+        var value: Any? = null
+        if (stmt.value != null) value = evaluate(stmt.value)
+
+        throw Return(value)
+    }
+
     override fun visitLetStmt(stmt: Stmt.Let) {
         var value: Any? = null
 
@@ -206,38 +247,36 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     }
 
     override fun visitLoopStmt(stmt: Stmt.Loop) {
-        inLoop = true
+        val lastLoopState = loopState
+        loopState = LoopState.InLoop
         while (true) {
             execute(stmt.body)
 
-            if (breakingLoop) {
-                breakingLoop = false
+            if (loopState == LoopState.BrokenLoop) {
                 break
             }
 
-            if (continuingLoop) {
-                continuingLoop = false
+            if (loopState == LoopState.ContinuedLoop) {
                 continue
             }
         }
-        inLoop = false
+        loopState = lastLoopState
     }
 
     override fun visitWhileStmt(stmt: Stmt.While) {
-        inLoop = true
+        val lastLoopState = loopState
+        loopState = LoopState.InLoop
         while (evaluate(stmt.condition) == true) {
             execute(stmt.body)
 
-            if (breakingLoop) {
-                breakingLoop = false
+            if (loopState == LoopState.BrokenLoop) {
                 break
             }
 
-            if (continuingLoop) {
-                continuingLoop = false
+            if (loopState == LoopState.ContinuedLoop) {
                 continue
             }
         }
-        inLoop = false
+        loopState = lastLoopState
     }
 }
