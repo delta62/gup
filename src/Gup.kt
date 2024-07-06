@@ -5,11 +5,22 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
-class SamLang {
+class Gup {
     companion object {
         private var hadError = false
         private var hadRuntimeError = false
-        private val interpreter = Interpreter()
+
+        fun runSource(source: String) {
+            try {
+                val assertionCount = run(source)
+                if (hadError) throw CompileError()
+                if (hadRuntimeError) throw RuntimeException("Runtime Error")
+                if (assertionCount == 0) throw RuntimeException("Didn't run any assertions")
+            } finally {
+                hadError = false
+                hadRuntimeError = false
+            }
+        }
 
         fun runFile(path: String) {
             val bytes = Files.readAllBytes(Paths.get(path))
@@ -30,14 +41,22 @@ class SamLang {
             }
         }
 
-        private fun run(source: String) {
+        private fun run(source: String): Int {
             val scanner = Scanner(source)
             val tokens = scanner.scanTokens()
             val parser = Parser(tokens)
             val statements = parser.parse()
+            val interpreter = Interpreter()
 
-            if (hadError) return
+            if (hadError) return 0
+
+            val resolver = Resolver(interpreter)
+            resolver.resolve(statements)
+
+            if (hadError) return 0
+
             interpreter.interpret(statements)
+            return interpreter.assertions
         }
 
         private fun report(line: Int, where: String, message: String) {
@@ -66,8 +85,8 @@ class SamLang {
 
 fun main(args: Array<String>) {
     when (args.size) {
-        0 -> SamLang.runPrompt()
-        1 -> SamLang.runFile(args[0])
+        0 -> Gup.runPrompt()
+        1 -> Gup.runFile(args[0])
         else -> {
             println("Usage: sl [script]")
             exitProcess(64)

@@ -6,6 +6,7 @@ enum class TokenType {
     MINUS, PLUS,
     SLASH, STAR,
     COLON,
+    PERCENT,
 
     EQ,
     IS,

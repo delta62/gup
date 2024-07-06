@@ -4,6 +4,8 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     internal val globals = Environment()
     private var environment = globals
     private var loopState = LoopState.NoLoop
+    private var locals = HashMap<Expr, Int>()
+    var assertions = 0
 
     init {
         globals.define("clock", object : Callable {
@@ -15,6 +17,20 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 return System.currentTimeMillis().toDouble() / 1000.0
             }
         })
+
+        globals.define("assertEqual", object : Callable {
+            override fun arity(): Int {
+                return 2
+            }
+
+            override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
+                val expected = arguments[0]
+                val actual = arguments[1]
+                assert(expected == actual)
+                assertions += 1
+                return SamUnit()
+            }
+        })
     }
 
     fun interpret(statements: List<Stmt>) {
@@ -23,13 +39,20 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 execute(statement)
             }
         } catch (error: RuntimeError) {
-            SamLang.runtimeError(error)
+            Gup.runtimeError(error)
         }
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Any {
         val value = evaluate(expr.value)
-        environment.assign(expr.name, value)
+
+        val distance = locals.get(expr)
+        if (distance != null) {
+            environment.assignAt(distance, expr.name, value)
+        } else {
+            globals.assign(expr.name, value)
+        }
+
         return value
     }
 
@@ -45,7 +68,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 } else if (left is String && right is String) {
                     left + right
                 } else {
-                    TODO("unreachable")
+                    throw Unreachable()
                 }
             }
 
@@ -57,6 +80,11 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
             STAR -> {
                 checkNumberOperands(expr.operator, left, right)
                 left as Double * right as Double
+            }
+
+            PERCENT -> {
+                checkNumberOperands(expr.operator, left, right)
+                left as Double % right as Double
             }
 
             GREATER -> {
@@ -81,7 +109,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
             ISNT -> !isEqual(left, right)
             IS -> isEqual(left, right)
-            else -> TODO("unreachable")
+            else -> throw Unreachable()
         }
     }
 
@@ -138,13 +166,23 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 -(right as Double)
             }
 
-            else -> TODO("unreachable")
+            else -> throw Unreachable()
         }
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any {
-        val value = environment.get(expr.name) ?: throw RuntimeError(expr.name, "Undefined variable '${expr.name.lexeme}'")
-        return value
+        return lookUpVariable(expr.name, expr)
+    }
+
+    private fun lookUpVariable(name: Token, expr: Expr): Any {
+        val distance = locals[expr]
+        val value = if (distance != null) {
+            environment.getAt(distance, name.lexeme)
+        } else {
+            globals.get(name)
+        }
+
+        return value ?: throw RuntimeError(name, "Undefined variable")
     }
 
     private fun checkNumberOperand(operator: Token, operand: Any) {
@@ -163,6 +201,10 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
     private fun execute(stmt: Stmt) {
         stmt.accept(this)
+    }
+
+    fun resolve(expr: Expr, depth: Int) {
+        locals[expr] = depth
     }
 
     internal fun executeBlock(statements: List<Stmt>, environment: Environment) {

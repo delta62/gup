@@ -60,6 +60,7 @@ class Scanner(private val source: String) {
             '=' -> addToken(EQ)
             '|' -> addToken(PIPE)
             '&' -> addToken(AMPERSAND)
+            '%' -> addToken(PERCENT)
             '<' -> addToken(if (match('=')) LESS_EQ else LESS)
             '>' -> addToken(if (match('=')) GREATER_EQ else GREATER)
             '/' -> {
@@ -76,7 +77,7 @@ class Scanner(private val source: String) {
             else -> {
                 if (c.isDigit()) number()
                 else if (c.isLetter()) identifier()
-                else SamLang.error(line, "Unexpected character")
+                else Gup.error(line, "Unexpected character")
             }
         }
     }
@@ -88,7 +89,7 @@ class Scanner(private val source: String) {
         }
 
         if (isAtEnd()) {
-            SamLang.error(line, "Unterminated string")
+            Gup.error(line, "Unterminated string")
             return
         }
 

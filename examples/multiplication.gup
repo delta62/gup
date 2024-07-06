@@ -1,0 +1,2 @@
+let x = 10 * 2
+assertEqual(x, 20)

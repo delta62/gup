@@ -1,0 +1,2 @@
+let x = 9 / 3
+assertEqual(x, 3)

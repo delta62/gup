@@ -198,7 +198,7 @@ class Parser(private val tokens: List<Token>) {
     private fun factor(): Expr {
         var expr = unary()
 
-        while (match(SLASH, STAR)) {
+        while (match(SLASH, STAR, PERCENT)) {
             val operator = previous()
             val right = unary()
             expr = Expr.Binary(expr, operator, right)
@@ -307,7 +307,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun error(token: Token, message: String): ParseError {
-        SamLang.error(token, message)
+        Gup.error(token, message)
         return ParseError()
     }
 
