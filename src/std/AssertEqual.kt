@@ -2,7 +2,7 @@ package std
 
 import Callable
 import Interpreter
-import SamUnit
+import GUnit
 
 class AssertEqual : Callable {
     override fun arity(): Int {
@@ -18,6 +18,6 @@ class AssertEqual : Callable {
             throw RuntimeException(message)
         }
 
-        return SamUnit()
+        return GUnit()
     }
 }

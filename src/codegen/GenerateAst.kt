@@ -15,26 +15,22 @@ fun main(args: Array<String>) {
     defineAst(outputDir, "Expr", listOf(
         "Assign   : val name: Token, val value: Expr",
         "Binary   : val left: Expr, val operator: Token, val right: Expr",
+        "Block    : val statements: List<Expr>",
+        "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
-        "Function : val name: Token, val params: List<Token>, val body: List<Stmt>",
+        "Continue : val token: Token",
+        "ForLoop  : val name: Token, val iterator: Token, val body: List<Expr>",
+        "Function : val name: Token, val params: List<Token>, val body: List<Expr>",
         "Grouping : val expression: Expr",
+        "If       : val condition: Expr, val thenBranch: List<Expr>, val elseBranch: List<Expr>?",
+        "Let      : val name: Token, val initializer: Expr?",
         "Literal  : val value: Any",
         "Logical  : val left: Expr, val operator: Token, val right: Expr",
+        "Loop     : val body: Expr",
+        "Return   : val keyword: Token, val value: Expr",
         "Unary    : val operator: Token, val right: Expr",
-        "Variable : val name: Token"
-    ))
-
-    defineAst(outputDir, "Stmt", listOf(
-        "Block      : val statements: List<Stmt>",
-        "Break      : val token: Token",
-        "Continue   : val token: Token",
-        "Expression : val expression: Expr",
-        "ForLoop    : val name: Token, val iterator: Token, val body: Stmt",
-        "If         : val condition: Expr, val thenBranch: Stmt, val elseBranch: Stmt?",
-        "Return     : val keyword: Token, val value: Expr?",
-        "Let        : val name: Token, val initializer: Expr?",
-        "Loop       : val body: Stmt",
-        "While      : val condition: Expr, val body: Stmt",
+        "Variable : val name: Token",
+        "While    : val condition: Expr, val body: Expr",
     ))
 
     println("Done!")
@@ -57,7 +53,6 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
         defineType(writer, baseName, className, fields)
     }
 
-    writer.println()
     writer.println("    abstract fun <R> accept(visitor: Visitor<R>): R")
 
     writer.println("}")
@@ -73,6 +68,7 @@ private fun defineType(writer: PrintWriter, baseName: String, className: String,
     writer.println("        }")
 
     writer.println("    }")
+    writer.println()
 }
 
 private fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {

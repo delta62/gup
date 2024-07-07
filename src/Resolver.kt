@@ -1,7 +1,7 @@
 import java.util.*
 import kotlin.collections.HashMap
 
-class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
+class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     private var currentFunction = FunctionType.None
     private val scopes = Stack<HashMap<String, Boolean>>()
 
@@ -20,9 +20,20 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(expr.right)
     }
 
+    override fun visitBreakExpr(expr: Expr.Break) { }
+
     override fun visitCallExpr(expr: Expr.Call) {
         resolve(expr.callee)
         for (argument in expr.arguments) resolve(argument)
+    }
+
+    override fun visitContinueExpr(expr: Expr.Continue) { }
+
+    override fun visitForLoopExpr(expr: Expr.ForLoop) {
+        beginScope()
+        declare(expr.name)
+        resolve(expr.body)
+        endScope()
     }
 
     override fun visitFunctionExpr(expr: Expr.Function) {
@@ -47,11 +58,38 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(expr.expression)
     }
 
+    override fun visitIfExpr(expr: Expr.If) {
+        resolve(expr.condition)
+        resolve(expr.thenBranch)
+        if (expr.elseBranch != null) resolve(expr.elseBranch)
+    }
+
+    override fun visitLetExpr(expr: Expr.Let) {
+        declare(expr.name)
+        if (expr.initializer != null) {
+            resolve(expr.initializer)
+        }
+
+        define(expr.name)
+    }
+
     override fun visitLiteralExpr(expr: Expr.Literal) {}
 
     override fun visitLogicalExpr(expr: Expr.Logical) {
         resolve(expr.left)
         resolve(expr.right)
+    }
+
+    override fun visitLoopExpr(expr: Expr.Loop) {
+        resolve(expr.body)
+    }
+
+    override fun visitReturnExpr(expr: Expr.Return) {
+        if (currentFunction != FunctionType.Function) {
+            Gup.error(expr.keyword, "Can't return from top-level code")
+        }
+
+        resolve(expr.value)
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary) {
@@ -66,65 +104,19 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolveLocal(expr, expr.name)
     }
 
-    override fun visitBlockStmt(stmt: Stmt.Block) {
+    override fun visitWhileExpr(expr: Expr.While) {
+        resolve(expr.condition)
+        resolve(expr.body)
+    }
+
+    override fun visitBlockExpr(expr: Expr.Block) {
         beginScope()
-        resolve(stmt.statements)
+        resolve(expr.statements)
         endScope()
     }
 
-    override fun visitBreakStmt(stmt: Stmt.Break) {}
-
-    override fun visitContinueStmt(stmt: Stmt.Continue) {}
-
-    override fun visitExpressionStmt(stmt: Stmt.Expression) {
-        resolve(stmt.expression)
-    }
-
-    override fun visitForLoopStmt(stmt: Stmt.ForLoop) {
-        beginScope()
-        declare(stmt.name)
-        resolve(stmt.body)
-        endScope()
-    }
-
-    override fun visitIfStmt(stmt: Stmt.If) {
-        resolve(stmt.condition)
-        resolve(stmt.thenBranch)
-        if (stmt.elseBranch != null) resolve(stmt.elseBranch)
-    }
-
-    override fun visitReturnStmt(stmt: Stmt.Return) {
-        if (currentFunction != FunctionType.Function) {
-            Gup.error(stmt.keyword, "Can't return from top-level code")
-        }
-
-        if (stmt.value != null) resolve(stmt.value)
-    }
-
-    override fun visitLetStmt(stmt: Stmt.Let) {
-        declare(stmt.name)
-        if (stmt.initializer != null) {
-            resolve(stmt.initializer)
-        }
-
-        define(stmt.name)
-    }
-
-    override fun visitLoopStmt(stmt: Stmt.Loop) {
-        resolve(stmt.body)
-    }
-
-    override fun visitWhileStmt(stmt: Stmt.While) {
-        resolve(stmt.condition)
-        resolve(stmt.body)
-    }
-
-    internal fun resolve(statements: List<Stmt>) {
-        for (statement in statements) resolve(statement)
-    }
-
-    private fun resolve(statement: Stmt) {
-        statement.accept(this)
+    internal fun resolve(expressions: List<Expr>) {
+        for (expression in expressions) resolve(expression)
     }
 
     private fun resolve(expression: Expr) {

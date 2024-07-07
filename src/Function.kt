@@ -11,12 +11,12 @@ class Function(private val declaration: Expr.Function, private val closure: Envi
         }
 
         try {
-            interpreter.executeBlock(declaration.body, env)
+            interpreter.evaluateBlock(declaration.body, env)
         } catch(returnValue: Return) {
-            return returnValue.value ?: SamUnit()
+            return returnValue.value ?: GUnit()
         }
 
-        return SamUnit()
+        return GUnit()
     }
 
     override fun toString(): String {

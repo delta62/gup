@@ -27,8 +27,7 @@ enum class TokenType {
     FN, RETURN,
 
     ELSE, STRUCT, ENUM, WHERE, OVER, FOR, WHILE, LOOP,
-    IF, BREAK, CONTINUE, LET, WITH, DO, END,
-    THEN, IN,
+    IF, BREAK, CONTINUE, LET, WITH, END, THEN, IN,
 
     EOF,
 }

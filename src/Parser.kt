@@ -4,104 +4,103 @@ class Parser(private val tokens: List<Token>) {
     private class ParseError : RuntimeException()
     private var current: Int = 0
 
-    fun parse(): List<Stmt> {
-        val statements = ArrayList<Stmt>()
+    fun parse(): List<Expr> {
+        val expressions = ArrayList<Expr>()
         while (!isAtEnd()) {
             val declaration = declaration()
-            if (declaration != null) statements.add(declaration)
+            if (declaration != null) expressions.add(declaration)
         }
 
-        return statements
+        return expressions
     }
 
     private fun expression(): Expr {
+        if (check(BREAK)) return breakExpression()
+        if (match(CONTINUE)) return continueExpression()
+        if (match(FOR)) return forExpression()
+        if (match(IF)) return ifExpression()
+        if (match(LOOP)) return loopExpression()
+        if (match(RETURN)) return returnExpression()
+        if (match(WHILE)) return whileExpression()
         return assignment()
     }
 
-    private fun declaration(): Stmt? {
+    private fun declaration(): Expr? {
         try {
-            if (match(LET)) return letDeclaration()
-            return statement()
+            if (match(LET)) return letExpression()
+            return expression()
         } catch (error: ParseError) {
             synchronize()
             return null
         }
     }
 
-    private fun statement(): Stmt {
-        if (check(BREAK)) return breakStatement()
-        if (match(CONTINUE)) return continueStatement()
-        if (match(FOR)) return forStatement()
-        if (match(IF)) return ifStatement()
-        if (match(RETURN)) return returnStatement()
-        if (match(WHILE)) return whileStatement()
-        if (match(LOOP)) return loopStatement()
-        if (match(DO)) return Stmt.Block(block())
-        return expressionStatement()
+    private fun breakExpression(): Expr {
+        return Expr.Break(consume(BREAK, "Expected 'break'"))
     }
 
-    private fun breakStatement(): Stmt {
-        return Stmt.Break(consume(BREAK, "Expected 'break'"))
+    private fun continueExpression(): Expr {
+        return Expr.Continue(consume(CONTINUE, "Expected 'continue'"))
     }
 
-    private fun continueStatement(): Stmt {
-        return Stmt.Continue(consume(CONTINUE, "Expected 'continue'"))
-    }
-
-    private fun forStatement(): Stmt {
+    private fun forExpression(): Expr {
         val name = consume(IDENTIFIER, "Expected local binding in for statement")
         consume(IN, "Expected 'in' in for statement")
         val iterable = consume(IDENTIFIER, "Expected iterable in for statement")
-        val body = statement()
+        val body = block()
 
-        return Stmt.ForLoop(name, iterable, body)
+        return Expr.ForLoop(name, iterable, body)
     }
 
-    private fun ifStatement(): Stmt {
+    private fun ifExpression(): Expr {
         val condition = expression()
-        consume(THEN, "Expected 'then' after if expression")
+        val thenBranch: List<Expr>
+        val elseBranch: List<Expr>?
 
-        val thenBranch = statement()
-        val elseBranch = if (match(ELSE)) statement() else null
+        if (match(THEN)) {
+            // Inline if
+            thenBranch = listOf(expression())
+            elseBranch = if (match(ELSE)) block() else null
+        } else {
+            // Block if
+            thenBranch = listOf(expression())
+            elseBranch = if (match(ELSE)) block() else null
+        }
+
         consume(END, "Expected 'end' after if expression")
 
-        return Stmt.If(condition, thenBranch, elseBranch)
+        return Expr.If(condition, thenBranch, elseBranch)
     }
 
-    private fun returnStatement(): Stmt {
+    private fun returnExpression(): Expr {
         val keyword = previous()
+        // TODO: newline triggers no-value return
         val value = expression()
 
-        return Stmt.Return(keyword, value)
+        return Expr.Return(keyword, value)
     }
 
-    private fun whileStatement(): Stmt {
+    private fun whileExpression(): Expr {
         val condition = expression()
-        val body = statement()
-
-        return Stmt.While(condition, body)
+        val body = expression()
+        return Expr.While(condition, body)
     }
 
-    private fun loopStatement(): Stmt {
-        val body = statement()
-        return Stmt.Loop(body)
+    private fun loopExpression(): Expr {
+        val body = expression()
+        return Expr.Loop(body)
     }
 
-    private fun letDeclaration(): Stmt {
+    private fun letExpression(): Expr {
         val name = consume(IDENTIFIER, "Expected a variable name")
         var initializer: Expr? = null
         if (match(EQ)) initializer = expression()
 
-        return Stmt.Let(name, initializer)
+        return Expr.Let(name, initializer)
     }
 
-    private fun expressionStatement(): Stmt {
-        val expr = expression()
-        return Stmt.Expression(expr)
-    }
-
-    private fun block(): List<Stmt> {
-        val statements = ArrayList<Stmt>()
+    private fun block(): List<Expr> {
+        val statements = ArrayList<Expr>()
         while (!check(END) && !isAtEnd()) {
             val declaration = declaration()
             if (declaration != null) statements.add(declaration)
@@ -330,7 +329,7 @@ class Parser(private val tokens: List<Token>) {
 
         consume(RIGHT_PAREN, "Expected '|' after parameters")
         consume(ARROW, "Expected 'do' before function body")
-        val body = listOf(expressionStatement())
+        val body = listOf(expression())
 
         return Expr.Function(name, params, body)
     }

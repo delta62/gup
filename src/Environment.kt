@@ -1,3 +1,5 @@
+import error.RuntimeError
+
 class Environment(private val enclosing: Environment? = null) {
     private val values = HashMap<String, Any?>()
 

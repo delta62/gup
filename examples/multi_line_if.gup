@@ -1,0 +1,5 @@
+if true
+    assertEqual(true, true)
+else
+    assertEqual(false, true)
+end

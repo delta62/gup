@@ -2,7 +2,7 @@ package std
 
 import Callable
 import Interpreter
-import SamUnit
+import GUnit
 
 class PrintLine : Callable {
     override fun arity(): Int {
@@ -11,6 +11,6 @@ class PrintLine : Callable {
 
     override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
         println(arguments[0])
-        return SamUnit()
+        return GUnit()
     }
 }

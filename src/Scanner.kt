@@ -11,7 +11,6 @@ class Scanner(private val source: String) {
             "and" to AND,
             "break" to BREAK,
             "continue" to CONTINUE,
-            "do" to DO,
             "else" to ELSE,
             "end" to END,
             "enum" to ENUM,
