@@ -26,7 +26,7 @@ sealed class Expr {
             return visitor.visitCallExpr(this)
         }
     }
-    data class Function(val params: List<Token>, val body: List<Stmt>) : Expr() {
+    data class Function(val name: Token, val params: List<Token>, val body: List<Stmt>) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitFunctionExpr(this)
         }

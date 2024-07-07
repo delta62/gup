@@ -12,10 +12,9 @@ class Gup {
 
         fun runSource(source: String) {
             try {
-                val assertionCount = run(source)
+                run(source)
                 if (hadError) throw CompileError()
                 if (hadRuntimeError) throw RuntimeException("Runtime Error")
-                if (assertionCount == 0) throw RuntimeException("Didn't run any assertions")
             } finally {
                 hadError = false
                 hadRuntimeError = false
@@ -41,22 +40,21 @@ class Gup {
             }
         }
 
-        private fun run(source: String): Int {
+        private fun run(source: String) {
             val scanner = Scanner(source)
             val tokens = scanner.scanTokens()
             val parser = Parser(tokens)
             val statements = parser.parse()
             val interpreter = Interpreter()
 
-            if (hadError) return 0
+            if (hadError) return
 
             val resolver = Resolver(interpreter)
             resolver.resolve(statements)
 
-            if (hadError) return 0
+            if (hadError) return
 
             interpreter.interpret(statements)
-            return interpreter.assertions
         }
 
         private fun report(line: Int, where: String, message: String) {

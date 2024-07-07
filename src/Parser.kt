@@ -33,7 +33,6 @@ class Parser(private val tokens: List<Token>) {
         if (match(CONTINUE)) return continueStatement()
         if (match(FOR)) return forStatement()
         if (match(IF)) return ifStatement()
-        if (match(PRINT)) return printStatement()
         if (match(RETURN)) return returnStatement()
         if (match(WHILE)) return whileStatement()
         if (match(LOOP)) return loopStatement()
@@ -67,11 +66,6 @@ class Parser(private val tokens: List<Token>) {
         consume(END, "Expected 'end' after if expression")
 
         return Stmt.If(condition, thenBranch, elseBranch)
-    }
-
-    private fun printStatement(): Stmt {
-        val value = expression()
-        return Stmt.Print(value)
     }
 
     private fun returnStatement(): Stmt {
@@ -298,7 +292,7 @@ class Parser(private val tokens: List<Token>) {
         if (match(FALSE)) return Expr.Literal(false)
         if (match(TRUE)) return Expr.Literal(true)
 
-        if (match(PIPE)) {
+        if (match(FN)) {
             return functionDefinition()
         }
 
@@ -320,8 +314,11 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun functionDefinition(): Expr {
+        val name = consume(IDENTIFIER, "Expected function name")
         val params = ArrayList<Token>()
-        if (!check(PIPE)) {
+
+        consume(LEFT_PAREN, "Expected '(' after function name")
+        if (!check(RIGHT_PAREN)) {
             do {
                 if (params.size > 255)  {
                     error(peek(), "Can't have more than 255 parameters")
@@ -331,11 +328,11 @@ class Parser(private val tokens: List<Token>) {
             } while (match(COMMA))
         }
 
-        consume(PIPE, "Expected '|' after parameters")
-        consume(DO, "Expected 'do' before function body")
-        val body = block()
+        consume(RIGHT_PAREN, "Expected '|' after parameters")
+        consume(ARROW, "Expected 'do' before function body")
+        val body = listOf(expressionStatement())
 
-        return Expr.Function(params, body)
+        return Expr.Function(name, params, body)
     }
 
     private fun match(vararg types: TokenType): Boolean {
@@ -364,7 +361,7 @@ class Parser(private val tokens: List<Token>) {
 
         while (!isAtEnd()) {
             when (peek().type) {
-                LET, FOR, IF, WHILE, PRINT, RETURN -> return
+                LET, FOR, IF, WHILE, RETURN -> return
                 else -> advance()
             }
         }

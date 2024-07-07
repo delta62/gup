@@ -6,7 +6,6 @@ sealed class Stmt {
         fun visitExpressionStmt(stmt: Expression): R
         fun visitForLoopStmt(stmt: ForLoop): R
         fun visitIfStmt(stmt: If): R
-        fun visitPrintStmt(stmt: Print): R
         fun visitReturnStmt(stmt: Return): R
         fun visitLetStmt(stmt: Let): R
         fun visitLoopStmt(stmt: Loop): R
@@ -41,11 +40,6 @@ sealed class Stmt {
     data class If(val condition: Expr, val thenBranch: Stmt, val elseBranch: Stmt?) : Stmt() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitIfStmt(this)
-        }
-    }
-    data class Print(val expression: Expr) : Stmt() {
-        override fun <R> accept(visitor: Visitor<R>): R {
-            return visitor.visitPrintStmt(this)
         }
     }
     data class Return(val keyword: Token, val value: Expr?) : Stmt() {

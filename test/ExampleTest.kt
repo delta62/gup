@@ -1,3 +1,4 @@
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import java.nio.file.Files
@@ -11,6 +12,7 @@ class ExampleTest {
     private val runner = FileRunner(examplePath)
 
     @TestFactory
+    @DisplayName("Code examples")
     fun exampleTests(): Stream<DynamicTest> {
         val path = Paths.get(examplePath)
         val files = Files.list(path)

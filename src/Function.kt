@@ -1,10 +1,10 @@
-class Function(private val declaration: Expr.Function) : Callable {
+class Function(private val declaration: Expr.Function, private val closure: Environment) : Callable {
     override fun arity(): Int {
         return declaration.params.size
     }
 
     override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
-        val env = Environment(interpreter.globals)
+        val env = Environment(closure)
 
         for (i in 0..<declaration.params.size) {
             env.define(declaration.params[i].lexeme, arguments[i])
@@ -20,6 +20,6 @@ class Function(private val declaration: Expr.Function) : Callable {
     }
 
     override fun toString(): String {
-        return "<function>"
+        return "<function ${declaration.name}>"
     }
 }

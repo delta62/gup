@@ -1,41 +1,18 @@
 import TokenType.*
+import std.AssertEqual
+import std.Epoch
+import std.PrintLine
 
 class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     internal val globals = Environment()
     private var environment = globals
     private var loopState = LoopState.NoLoop
     private var locals = HashMap<Expr, Int>()
-    var assertions = 0
 
     init {
-        globals.define("clock", object : Callable {
-            override fun arity(): Int {
-                return 0
-            }
-
-            override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
-                return System.currentTimeMillis().toDouble() / 1000.0
-            }
-        })
-
-        globals.define("assertEqual", object : Callable {
-            override fun arity(): Int {
-                return 2
-            }
-
-            override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
-                val expected = arguments[0]
-                val actual = arguments[1]
-
-                if (expected != actual) {
-                    val message = "Expected $actual to equal $expected"
-                    throw RuntimeException(message)
-                }
-
-                assertions += 1
-                return SamUnit()
-            }
-        })
+        globals.define("assertEqual", AssertEqual())
+        globals.define("epoch", Epoch())
+        globals.define("println", PrintLine())
     }
 
     fun interpret(statements: List<Stmt>) {
@@ -50,8 +27,8 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
     override fun visitAssignExpr(expr: Expr.Assign): Any {
         val value = evaluate(expr.value)
-
         val distance = locals[expr]
+
         if (distance != null) {
             environment.assignAt(distance, expr.name, value)
         } else {
@@ -163,7 +140,9 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Any {
-        return Function(expr)
+        val function = Function(expr, environment)
+        environment.define(expr.name.lexeme, function)
+        return function
     }
 
     override fun visitGroupingExpr(expr: Expr.Grouping): Any {
@@ -270,17 +249,6 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         return a == b
     }
 
-    private fun stringify(obj: Any): String {
-        if (obj is Double) {
-            var text = obj.toString()
-            if (text.endsWith(".0")) {
-                text = text.substring(0, text.length - 2)
-                return text
-            }
-        }
-        return obj.toString()
-    }
-
     override fun visitBlockStmt(stmt: Stmt.Block) {
         executeBlock(stmt.statements, Environment(environment))
     }
@@ -309,11 +277,6 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         } else if (stmt.elseBranch != null) {
             execute(stmt.elseBranch)
         }
-    }
-
-    override fun visitPrintStmt(stmt: Stmt.Print) {
-        val value = evaluate(stmt.expression)
-        println(stringify(value))
     }
 
     override fun visitReturnStmt(stmt: Stmt.Return) {

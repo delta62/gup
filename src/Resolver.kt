@@ -3,13 +3,13 @@ import kotlin.collections.HashMap
 
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
     private var currentFunction = FunctionType.None
+    private val scopes = Stack<HashMap<String, Boolean>>()
 
     enum class FunctionType {
         None,
         Function,
     }
 
-    private val scopes = Stack<HashMap<String, Boolean>>()
     override fun visitAssignExpr(expr: Expr.Assign) {
         resolve(expr.value)
         resolveLocal(expr, expr.name)
@@ -26,6 +26,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     }
 
     override fun visitFunctionExpr(expr: Expr.Function) {
+        declare(expr.name)
+        define(expr.name)
+
         val enclosingFunction = currentFunction
         currentFunction = FunctionType.Function
 
@@ -88,10 +91,6 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(stmt.condition)
         resolve(stmt.thenBranch)
         if (stmt.elseBranch != null) resolve(stmt.elseBranch)
-    }
-
-    override fun visitPrintStmt(stmt: Stmt.Print) {
-        resolve(stmt.expression)
     }
 
     override fun visitReturnStmt(stmt: Stmt.Return) {

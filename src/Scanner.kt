@@ -16,6 +16,7 @@ class Scanner(private val source: String) {
             "end" to END,
             "enum" to ENUM,
             "false" to FALSE,
+            "fn" to FN,
             "for" to FOR,
             "if" to IF,
             "is" to IS,
@@ -25,7 +26,6 @@ class Scanner(private val source: String) {
             "not" to NOT,
             "or" to OR,
             "over" to OVER,
-            "print" to PRINT,
             "return" to RETURN,
             "struct" to STRUCT,
             "then" to THEN,
@@ -55,7 +55,7 @@ class Scanner(private val source: String) {
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
             '.' -> addToken(DOT)
-            '-' -> addToken(MINUS)
+            '-' -> addToken(scanMinus())
             '~' -> addToken(TILDE)
             '^' -> addToken(CARET)
             '+' -> addToken(PLUS)
@@ -75,6 +75,14 @@ class Scanner(private val source: String) {
                 else if (c.isLetter()) identifier()
                 else Gup.error(line, "Unexpected character")
             }
+        }
+    }
+
+    private fun scanMinus(): TokenType {
+        return if (match('>')) {
+            ARROW
+        } else {
+            MINUS
         }
     }
 

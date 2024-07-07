@@ -24,7 +24,7 @@ class Environment(private val enclosing: Environment? = null) {
 
     fun get(name: Token): Any? {
         if (values.containsKey(name.lexeme)) {
-            return values.get(name.lexeme)
+            return values[name.lexeme]
         }
 
         if (enclosing != null) {
@@ -46,5 +46,20 @@ class Environment(private val enclosing: Environment? = null) {
         }
 
         throw RuntimeError(name, "Undefined variable '${name.lexeme}'")
+    }
+
+    private fun depth(): Int {
+        var depth = 0
+        var ptr = enclosing
+        while (ptr != null) {
+            depth += 1
+            ptr = ptr.enclosing
+        }
+
+        return depth
+    }
+
+    override fun toString(): String {
+        return "[Environment depth=${depth()}] $values "
     }
 }
