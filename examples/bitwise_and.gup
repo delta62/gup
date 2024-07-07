@@ -1,0 +1,2 @@
+let x = 12345 & 1
+assertEqual(x, 1)

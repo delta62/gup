@@ -172,9 +172,57 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun comparison(): Expr {
-        var expr = term()
+        var expr = bitOr()
 
         while (match(GREATER, GREATER_EQ, LESS, LESS_EQ)) {
+            val operator = previous()
+            val right = bitOr()
+            expr = Expr.Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun bitOr(): Expr {
+        var expr = bitXor()
+
+        while (match(PIPE)) {
+            val operator = previous()
+            val right = bitXor()
+            expr = Expr.Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun bitXor(): Expr {
+        var expr = bitAnd()
+
+        while (match(CARET)) {
+            val operator = previous()
+            val right = bitAnd()
+            expr = Expr.Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun bitAnd(): Expr {
+        var expr = shift()
+
+        while (match(AMPERSAND)) {
+            val operator = previous()
+            val right = shift()
+            expr = Expr.Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun shift(): Expr {
+        var expr = term()
+
+        while (match(LESS_LESS, GREATER_GREATER)) {
             val operator = previous()
             val right = term()
             expr = Expr.Binary(expr, operator, right)
@@ -208,7 +256,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun unary(): Expr {
-        if (match(NOT, MINUS)) {
+        if (match(NOT, MINUS, PLUS, TILDE, CARET)) {
             val operator = previous()
             val right = unary()
             return Expr.Unary(operator, right)

@@ -1,0 +1,2 @@
+let x = 16 >> 1
+assertEqual(x, 8)

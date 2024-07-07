@@ -22,6 +22,7 @@ class Scanner(private val source: String) {
             "isnt" to ISNT,
             "let" to LET,
             "loop" to LOOP,
+            "not" to NOT,
             "or" to OR,
             "over" to OVER,
             "print" to PRINT,
@@ -55,22 +56,17 @@ class Scanner(private val source: String) {
             ':' -> addToken(COLON)
             '.' -> addToken(DOT)
             '-' -> addToken(MINUS)
+            '~' -> addToken(TILDE)
+            '^' -> addToken(CARET)
             '+' -> addToken(PLUS)
             '*' -> addToken(STAR)
             '=' -> addToken(EQ)
             '|' -> addToken(PIPE)
             '&' -> addToken(AMPERSAND)
             '%' -> addToken(PERCENT)
-            '<' -> addToken(if (match('=')) LESS_EQ else LESS)
-            '>' -> addToken(if (match('=')) GREATER_EQ else GREATER)
-            '/' -> {
-                if (match('/')) {
-                    while (peek() != '\n' && !isAtEnd()) advance()
-                } else {
-                    addToken(SLASH)
-                }
-            }
-
+            '<' -> addToken(scanLess())
+            '>' -> addToken(scanGreater())
+            '/' -> scanSlash()
             ' ', '\r', '\t' -> {}
             '\n' -> line++
             '"' -> string()
@@ -79,6 +75,34 @@ class Scanner(private val source: String) {
                 else if (c.isLetter()) identifier()
                 else Gup.error(line, "Unexpected character")
             }
+        }
+    }
+
+    private fun scanSlash() {
+        if (match('/')) {
+            while (peek() != '\n' && !isAtEnd()) advance()
+        } else {
+            addToken(SLASH)
+        }
+    }
+
+    private fun scanLess(): TokenType {
+        return if (match('=')) {
+            LESS_EQ
+        } else if (match('<')) {
+            LESS_LESS
+        } else {
+            LESS
+        }
+    }
+
+    private fun scanGreater(): TokenType {
+        return if (match('=')) {
+            GREATER_EQ
+        } else if (match('>')) {
+            GREATER_GREATER
+        } else {
+            GREATER
         }
     }
 

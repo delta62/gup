@@ -8,21 +8,25 @@ enum class TokenType {
     COLON,
     PERCENT,
 
+    // Bit shifts
+    LESS_LESS, GREATER_GREATER,
+
+    // Assignment
     EQ,
-    IS,
-    ISNT,
-    NOT,
-    GREATER,
-    GREATER_EQ,
-    LESS,
-    LESS_EQ,
 
-    PIPE, AMPERSAND,
+    // Comparison
+    IS, ISNT, NOT, AND, OR,
+    GREATER, GREATER_EQ,
+    LESS, LESS_EQ,
 
-    IDENTIFIER, STRING, NUMBER,
+    // Bitwise operators
+    PIPE, AMPERSAND, TILDE, CARET,
 
-    AND, ELSE, FALSE, STRUCT, ENUM, WHERE, OVER, FOR, WHILE, LOOP,
-    OR, IF, RETURN, BREAK, CONTINUE, TRUE, LET, PRINT, WITH, DO, END,
+    // Literals
+    IDENTIFIER, STRING, NUMBER, TRUE, FALSE,
+
+    ELSE, STRUCT, ENUM, WHERE, OVER, FOR, WHILE, LOOP,
+    IF, RETURN, BREAK, CONTINUE, LET, PRINT, WITH, DO, END,
     THEN, IN,
 
     EOF,
