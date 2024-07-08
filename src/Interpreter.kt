@@ -156,7 +156,11 @@ class Interpreter : Expr.Visitor<Any> {
 
     override fun visitFunctionExpr(expr: Expr.Function): Any {
         val function = Function(expr, environment)
-        environment.define(expr.name.lexeme, function)
+
+        if (expr.name != null) {
+            environment.define(expr.name.lexeme, function)
+        }
+
         return function
     }
 

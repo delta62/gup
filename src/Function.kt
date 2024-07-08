@@ -10,10 +10,10 @@ class Function(private val declaration: Expr.Function, private val closure: Envi
             env.define(declaration.params[i].lexeme, arguments[i])
         }
 
-        try {
-            return interpreter.evaluateBlock(declaration.body, env)
+        return try {
+            interpreter.evaluateBlock(declaration.body, env)
         } catch(returnValue: Return) {
-            return returnValue.value ?: GUnit()
+            returnValue.value ?: GUnit()
         }
     }
 

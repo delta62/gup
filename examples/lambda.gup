@@ -1,0 +1,2 @@
+let return42 = fn() -> 42
+assertEqual(return42(), 42)

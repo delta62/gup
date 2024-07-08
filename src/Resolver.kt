@@ -37,8 +37,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     }
 
     override fun visitFunctionExpr(expr: Expr.Function) {
-        declare(expr.name)
-        define(expr.name)
+        if (expr.name != null) {
+            declare(expr.name)
+            define(expr.name)
+        }
 
         val enclosingFunction = currentFunction
         currentFunction = FunctionType.Function

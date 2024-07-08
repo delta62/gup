@@ -305,8 +305,13 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun functionDefinition(): Expr {
-        val name = consume(IDENTIFIER, "Expected function name")
         val params = ArrayList<Token>()
+
+        val name = if (check(IDENTIFIER)) {
+            advance()
+        } else {
+            null
+        }
 
         consume(LEFT_PAREN, "Expected '(' after function name")
         if (!check(RIGHT_PAREN)) {
