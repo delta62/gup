@@ -122,7 +122,7 @@ sealed class Expr {
         }
     }
 
-    data class While(val condition: Expr, val body: Expr) : Expr() {
+    data class While(val condition: Expr, val body: List<Expr>) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitWhileExpr(this)
         }

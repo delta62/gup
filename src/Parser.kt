@@ -79,7 +79,12 @@ class Parser(private val tokens: List<Token>) {
 
     private fun whileExpression(): Expr {
         val condition = expression()
-        val body = expression()
+        val body = if (match(ARROW)) {
+            listOf(expression())
+        } else {
+            block(END)
+        }
+
         return Expr.While(condition, body)
     }
 

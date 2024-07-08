@@ -266,8 +266,8 @@ class Interpreter : Expr.Visitor<Any> {
 
     override fun visitWhileExpr(expr: Expr.While): Any {
         return withLoop {
-            if (evaluate(expr.condition) == true) return@withLoop LoopReturn.Done
-            evaluate(expr.body)
+            if (evaluate(expr.condition) == false) return@withLoop LoopReturn.Done
+            evaluateBlock(expr.body, Environment(environment))
             return@withLoop LoopReturn.Ongoing
         }
     }

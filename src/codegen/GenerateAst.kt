@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
         "Return   : val keyword: Token, val value: Expr",
         "Unary    : val operator: Token, val right: Expr",
         "Variable : val name: Token",
-        "While    : val condition: Expr, val body: Expr",
+        "While    : val condition: Expr, val body: List<Expr>",
     ))
 
     println("Done!")
