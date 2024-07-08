@@ -56,7 +56,7 @@ sealed class Expr {
         }
     }
 
-    data class ForLoop(val name: Token, val iterator: Token, val body: List<Expr>) : Expr() {
+    data class ForLoop(val name: Token, val iterator: Expr, val body: List<Expr>) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitForLoopExpr(this)
         }

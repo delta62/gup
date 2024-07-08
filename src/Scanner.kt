@@ -17,6 +17,7 @@ class Scanner(private val source: String) {
             "fn" to FN,
             "for" to FOR,
             "if" to IF,
+            "in" to IN,
             "is" to IS,
             "isnt" to ISNT,
             "let" to LET,
@@ -48,7 +49,6 @@ class Scanner(private val source: String) {
             '}' -> addToken(RIGHT_BRACE)
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
-            '.' -> addToken(DOT)
             '~' -> addToken(TILDE)
             '^' -> addToken(CARET)
             '+' -> addToken(PLUS)
@@ -57,6 +57,7 @@ class Scanner(private val source: String) {
             '|' -> addToken(PIPE)
             '&' -> addToken(AMPERSAND)
             '%' -> addToken(PERCENT)
+            '.' -> scanDot()
             '-' -> scanMinus()
             '<' -> scanLess()
             '>' -> scanGreater()
@@ -75,6 +76,20 @@ class Scanner(private val source: String) {
     private fun scanNewline() {
         line += 1
         addToken(NEWLINE)
+    }
+
+    private fun scanDot() {
+        val tokenType = if (match('.')) {
+            if (match('=')) {
+                DOT_DOT_EQ
+            } else {
+                DOT_DOT
+            }
+        } else {
+            DOT
+        }
+
+        addToken(tokenType)
     }
 
     private fun scanMinus() {

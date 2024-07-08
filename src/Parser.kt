@@ -49,7 +49,8 @@ class Parser(private val tokens: List<Token>) {
     private fun forExpression(): Expr {
         val name = consume(IDENTIFIER, "Expected local binding in for expression")
         consume(IN, "Expected 'in' in for expression")
-        val iterable = consume(IDENTIFIER, "Expected iterable in for expression")
+        val iterable = expression()
+        skipWhitespace()
         val body = block(END)
 
         return Expr.ForLoop(name, iterable, body)
@@ -103,18 +104,29 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun assignment(): Expr {
-        val expr = or()
+        val expr = range()
 
         if (match(EQ)) {
             val equals = previous()
-            val value = assignment()
+            val value = range()
 
             if (expr is Expr.Variable) {
-                val name = expr.name
-                return Expr.Assign(name, value)
+                return Expr.Assign(expr.name, value)
             }
 
             error(equals, "Invalid assignment target")
+        }
+
+        return expr
+    }
+
+    private fun range(): Expr {
+        var expr = or()
+
+        if (match(DOT_DOT, DOT_DOT_EQ)) {
+            val operator = previous()
+            val right = or()
+            expr = Expr.Binary(expr, operator, right)
         }
 
         return expr

@@ -32,6 +32,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     override fun visitForLoopExpr(expr: Expr.ForLoop) {
         beginScope()
         declare(expr.name)
+        define(expr.name)
         resolve(expr.body)
         endScope()
     }

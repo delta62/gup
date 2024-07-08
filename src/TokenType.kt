@@ -1,8 +1,8 @@
 enum class TokenType {
     LEFT_PAREN, RIGHT_PAREN,
     LEFT_BRACE, RIGHT_BRACE,
-    DOT, COMMA, COLON, ARROW,
-    LET, END,
+    DOT, DOT_DOT, DOT_DOT_EQ,
+    COMMA, COLON, ARROW, LET, END,
 
     // Operators
     // Mathematical

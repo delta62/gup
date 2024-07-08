@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
         "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
         "Continue : val token: Token",
-        "ForLoop  : val name: Token, val iterator: Token, val body: List<Expr>",
+        "ForLoop  : val name: Token, val iterator: Expr, val body: List<Expr>",
         "Function : val name: Token?, val params: List<Token>, val body: List<Expr>",
         "Grouping : val expression: Expr",
         "If       : val condition: Expr, val thenBranch: List<Expr>, val elseBranch: List<Expr>?",

@@ -93,6 +93,15 @@ class Interpreter : Expr.Visitor<Any> {
                 }
             }
 
+            DOT_DOT, DOT_DOT_EQ -> {
+                val (min, max) = checkIntegerOperands(expr.operator, left, right)
+                if (expr.operator.type == DOT_DOT) {
+                    Range(min, max)
+                } else {
+                    Range(min, max + 1)
+                }
+            }
+
             AMPERSAND -> {
                 val (l, r) = checkIntegerOperands(expr.operator, left, right)
                 l.and(r).toDouble()
@@ -264,14 +273,15 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     override fun visitForLoopExpr(expr: Expr.ForLoop): Any {
-        val iterator = checkIterable(expr.iterator, expr.iterator.literal as Iterable<*>)
+        val iterator = checkIterable(expr.name, evaluate(expr.iterator))
         val env = Environment(environment)
-        env.define(expr.name.lexeme, null)
+        var item = iterator.next() ?: return GUnit()
+        env.define(expr.name.lexeme, item)
 
         return withLoop {
-            val item = iterator.next() ?: return@withLoop LoopReturn.Done
             env.assign(expr.name, item)
             evaluateBlock(expr.body, env)
+            item = iterator.next() ?: return@withLoop LoopReturn.Done
             return@withLoop LoopReturn.Ongoing
         }
     }
@@ -358,7 +368,7 @@ class Interpreter : Expr.Visitor<Any> {
         try {
             while (true) {
                 try {
-                    l()
+                    if (l() == LoopReturn.Done) break
                 } catch (_: Continue) {
 
                 } catch (_: Break) {
