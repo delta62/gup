@@ -44,7 +44,7 @@ class Gup {
 
         private fun run(source: String) {
             val scanner = Scanner(source)
-            val tokens = scanner.scanTokens()
+            val tokens = scanner.scan()
             val parser = Parser(tokens)
             val statements = parser.parse()
             val interpreter = Interpreter()

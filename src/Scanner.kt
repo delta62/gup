@@ -7,13 +7,12 @@ class Scanner(private val source: String) {
     private val tokens = ArrayList<Token>()
 
     companion object {
-        val keywords = mapOf(
+        private val keywords = mapOf(
             "and" to AND,
             "break" to BREAK,
             "continue" to CONTINUE,
             "else" to ELSE,
             "end" to END,
-            "enum" to ENUM,
             "false" to FALSE,
             "fn" to FN,
             "for" to FOR,
@@ -24,18 +23,14 @@ class Scanner(private val source: String) {
             "loop" to LOOP,
             "not" to NOT,
             "or" to OR,
-            "over" to OVER,
             "return" to RETURN,
-            "struct" to STRUCT,
             "then" to THEN,
             "true" to TRUE,
-            "where" to WHERE,
             "while" to WHILE,
-            "with" to WITH,
         )
     }
 
-    fun scanTokens(): List<Token> {
+    fun scan(): List<Token> {
         while (!isAtEnd()) {
             start = current
             scanToken()
@@ -54,7 +49,6 @@ class Scanner(private val source: String) {
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
             '.' -> addToken(DOT)
-            '-' -> addToken(scanMinus())
             '~' -> addToken(TILDE)
             '^' -> addToken(CARET)
             '+' -> addToken(PLUS)
@@ -63,11 +57,12 @@ class Scanner(private val source: String) {
             '|' -> addToken(PIPE)
             '&' -> addToken(AMPERSAND)
             '%' -> addToken(PERCENT)
-            '<' -> addToken(scanLess())
-            '>' -> addToken(scanGreater())
+            '-' -> scanMinus()
+            '<' -> scanLess()
+            '>' -> scanGreater()
             '/' -> scanSlash()
             ' ', '\r', '\t' -> {}
-            '\n' -> line++
+            '\n' -> scanNewline()
             '"' -> string()
             else -> {
                 if (c.isDigit()) number()
@@ -77,12 +72,19 @@ class Scanner(private val source: String) {
         }
     }
 
-    private fun scanMinus(): TokenType {
-        return if (match('>')) {
+    private fun scanNewline() {
+        line += 1
+        addToken(NEWLINE)
+    }
+
+    private fun scanMinus() {
+        val tokenType = if (match('>')) {
             ARROW
         } else {
             MINUS
         }
+
+        addToken(tokenType)
     }
 
     private fun scanSlash() {
@@ -93,24 +95,28 @@ class Scanner(private val source: String) {
         }
     }
 
-    private fun scanLess(): TokenType {
-        return if (match('=')) {
+    private fun scanLess() {
+        val tokenType = if (match('=')) {
             LESS_EQ
         } else if (match('<')) {
             LESS_LESS
         } else {
             LESS
         }
+
+        addToken(tokenType)
     }
 
-    private fun scanGreater(): TokenType {
-        return if (match('=')) {
+    private fun scanGreater() {
+        val tokenType = if (match('=')) {
             GREATER_EQ
         } else if (match('>')) {
             GREATER_GREATER
         } else {
             GREATER
         }
+
+        addToken(tokenType)
     }
 
     private fun string() {

@@ -1,0 +1,5 @@
+fn return42()
+    42
+end
+
+assertEqual(return42(), 42)

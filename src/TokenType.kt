@@ -1,23 +1,22 @@
 enum class TokenType {
     LEFT_PAREN, RIGHT_PAREN,
     LEFT_BRACE, RIGHT_BRACE,
-    DOT,
+    DOT, COMMA, COLON, ARROW,
+    LET, END,
+
+    // Operators
+    // Mathematical
     MINUS, PLUS,
     SLASH, STAR, PERCENT,
-    COMMA, COLON, ARROW,
-
     // Bit shifts
     LESS_LESS, GREATER_GREATER,
-
     // Assignment
     EQ,
-
     // Comparison
     IS, ISNT, NOT, AND, OR,
     GREATER, GREATER_EQ,
     LESS, LESS_EQ,
-
-    // Bitwise operators
+    // Bitwise
     PIPE, AMPERSAND, TILDE, CARET,
 
     // Literals
@@ -26,8 +25,12 @@ enum class TokenType {
     // Functions
     FN, RETURN,
 
-    ELSE, STRUCT, ENUM, WHERE, OVER, FOR, WHILE, LOOP,
-    IF, BREAK, CONTINUE, LET, WITH, END, THEN, IN,
+    // Control flow
+    IF, ELSE, FOR, WHILE, LOOP, BREAK, CONTINUE, IN, THEN,
 
-    EOF,
+    // Compound types
+    // STRUCT, ENUM, WHERE, OVER, WITH,
+
+    // Control/meta characters
+    NEWLINE, EOF,
 }

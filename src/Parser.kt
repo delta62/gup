@@ -1,33 +1,23 @@
 import TokenType.*
+import error.ParseError
 
 class Parser(private val tokens: List<Token>) {
-    private class ParseError : RuntimeException()
     private var current: Int = 0
 
     fun parse(): List<Expr> {
-        val expressions = ArrayList<Expr>()
+        val declarations = ArrayList<Expr>()
         while (!isAtEnd()) {
-            val declaration = declaration()
-            if (declaration != null) expressions.add(declaration)
+            val expr = declaration()
+            if (expr != null) declarations.add(expr)
+            while (peek().type == NEWLINE) advance()
         }
 
-        return expressions
-    }
-
-    private fun expression(): Expr {
-        if (check(BREAK)) return breakExpression()
-        if (match(CONTINUE)) return continueExpression()
-        if (match(FOR)) return forExpression()
-        if (match(IF)) return ifExpression()
-        if (match(LOOP)) return loopExpression()
-        if (match(RETURN)) return returnExpression()
-        if (match(WHILE)) return whileExpression()
-        return assignment()
+        return declarations
     }
 
     private fun declaration(): Expr? {
         try {
-            if (match(LET)) return letExpression()
+            // TODO only allow import, struct, enum, function, type class, const `let`
             return expression()
         } catch (error: ParseError) {
             synchronize()
@@ -35,47 +25,49 @@ class Parser(private val tokens: List<Token>) {
         }
     }
 
+    private fun expression(): Expr {
+        if (match(BREAK)) return breakExpression()
+        if (match(CONTINUE)) return continueExpression()
+        if (match(FOR)) return forExpression()
+        if (match(IF)) return ifExpression()
+        if (match(LET)) return letExpression()
+        if (match(LOOP)) return loopExpression()
+        if (match(NEWLINE)) return expression()
+        if (match(RETURN)) return returnExpression()
+        if (match(WHILE)) return whileExpression()
+        return assignment()
+    }
+
     private fun breakExpression(): Expr {
-        return Expr.Break(consume(BREAK, "Expected 'break'"))
+        return Expr.Break(previous())
     }
 
     private fun continueExpression(): Expr {
-        return Expr.Continue(consume(CONTINUE, "Expected 'continue'"))
+        return Expr.Continue(previous())
     }
 
     private fun forExpression(): Expr {
-        val name = consume(IDENTIFIER, "Expected local binding in for statement")
-        consume(IN, "Expected 'in' in for statement")
-        val iterable = consume(IDENTIFIER, "Expected iterable in for statement")
-        val body = block()
+        val name = consume(IDENTIFIER, "Expected local binding in for expression")
+        consume(IN, "Expected 'in' in for expression")
+        val iterable = consume(IDENTIFIER, "Expected iterable in for expression")
+        val body = block(END)
 
         return Expr.ForLoop(name, iterable, body)
     }
 
     private fun ifExpression(): Expr {
         val condition = expression()
-        val thenBranch: List<Expr>
-        val elseBranch: List<Expr>?
+        consume(THEN, "expected 'then' after if expression")
 
-        if (match(THEN)) {
-            // Inline if
-            thenBranch = listOf(expression())
-            elseBranch = if (match(ELSE)) block() else null
-        } else {
-            // Block if
-            thenBranch = listOf(expression())
-            elseBranch = if (match(ELSE)) block() else null
-        }
-
-        consume(END, "Expected 'end' after if expression")
+        val thenBranch = block(ELSE, END)
+        val elseBranch = if (previous().type == ELSE) block(ELSE, END) else null
 
         return Expr.If(condition, thenBranch, elseBranch)
     }
 
     private fun returnExpression(): Expr {
         val keyword = previous()
-        // TODO: newline triggers no-value return
-        val value = expression()
+        val value = if (match(NEWLINE)) Expr.Literal(GUnit()) else expression()
 
         return Expr.Return(keyword, value)
     }
@@ -99,15 +91,15 @@ class Parser(private val tokens: List<Token>) {
         return Expr.Let(name, initializer)
     }
 
-    private fun block(): List<Expr> {
-        val statements = ArrayList<Expr>()
-        while (!check(END) && !isAtEnd()) {
-            val declaration = declaration()
-            if (declaration != null) statements.add(declaration)
+    private fun block(vararg terminals: TokenType): List<Expr> {
+        val expressions = ArrayList<Expr>()
+        while (!check(*terminals) && !isAtEnd()) {
+            expressions.add(expression())
+            skipWhitespace()
         }
 
-        consume(END, "Expected 'end' after block")
-        return statements
+        consume("Unterminated block", *terminals)
+        return expressions
     }
 
     private fun assignment(): Expr {
@@ -328,8 +320,14 @@ class Parser(private val tokens: List<Token>) {
         }
 
         consume(RIGHT_PAREN, "Expected '|' after parameters")
-        consume(ARROW, "Expected 'do' before function body")
-        val body = listOf(expression())
+
+        val body = if (match(ARROW)) {
+            val expr = expression()
+            skipWhitespace()
+            listOf(expr)
+        } else {
+            block(END)
+        }
 
         return Expr.Function(name, params, body)
     }
@@ -346,7 +344,15 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun consume(type: TokenType, message: String): Token {
-        if (check(type)) return advance()
+        return consume(message, type)
+    }
+
+    private fun consume(message: String, vararg types: TokenType): Token {
+        if (check(*types)) {
+            val ret = advance()
+            skipWhitespace()
+            return ret
+        }
         throw error(peek(), message)
     }
 
@@ -360,15 +366,19 @@ class Parser(private val tokens: List<Token>) {
 
         while (!isAtEnd()) {
             when (peek().type) {
-                LET, FOR, IF, WHILE, RETURN -> return
+                LET, FOR, IF, WHILE, LOOP, RETURN, FN -> return
                 else -> advance()
             }
         }
     }
 
-    private fun check(type: TokenType): Boolean {
+    private fun check(vararg types: TokenType): Boolean {
         if (isAtEnd()) return false
-        return peek().type == type
+        return types.contains(peek().type)
+    }
+
+    private fun skipWhitespace() {
+        while (match(NEWLINE)) { }
     }
 
     private fun advance(): Token {
@@ -385,6 +395,13 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun previous(): Token {
-        return tokens[current - 1]
+        var location = current - 1
+        while (location >= 0) {
+            val tok = tokens[location]
+            if (tok.type != NEWLINE) return tok
+            location -= 1
+        }
+
+        throw RuntimeException("Reached start of input while attempting to find previous token")
     }
 }

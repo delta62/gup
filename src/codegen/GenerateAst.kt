@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
     defineAst(outputDir, "Expr", listOf(
         "Assign   : val name: Token, val value: Expr",
         "Binary   : val left: Expr, val operator: Token, val right: Expr",
-        "Block    : val statements: List<Expr>",
+        "Block    : val expressions: List<Expr>",
         "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
         "Continue : val token: Token",
@@ -62,11 +62,9 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
 private fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
     println("  Generating $baseName.$className")
     writer.println("    data class $className($fieldList) : $baseName() {")
-
     writer.println("        override fun <R> accept(visitor: Visitor<R>): R {")
     writer.println("            return visitor.visit$className$baseName(this)")
     writer.println("        }")
-
     writer.println("    }")
     writer.println()
 }

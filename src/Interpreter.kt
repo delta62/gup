@@ -1,8 +1,11 @@
 import TokenType.*
+import error.Break
+import error.Continue
 import error.RuntimeError
 import error.Unreachable
 import std.AssertEqual
 import std.Epoch
+import std.Iterable
 import std.PrintLine
 
 class Interpreter : Expr.Visitor<Any> {
@@ -116,22 +119,26 @@ class Interpreter : Expr.Visitor<Any> {
                 l.shl(r).toDouble()
             }
 
-            ISNT -> !isEqual(left, right)
-            IS -> isEqual(left, right)
+            ISNT -> left != right
+            IS -> left == right
             else -> throw Unreachable()
         }
     }
 
     override fun visitBreakExpr(expr: Expr.Break): Any {
         if (loopState != LoopState.InLoop) throw RuntimeError(expr.token, "Cannot break outside of loops")
-        loopState = LoopState.BrokenLoop
-        return GUnit()
+        throw Break()
+    }
+
+    override fun visitContinueExpr(expr: Expr.Continue): Any {
+        if (loopState != LoopState.InLoop) throw RuntimeError(expr.token, "Cannot continue outside of loops")
+        throw Continue()
     }
 
     override fun visitCallExpr(expr: Expr.Call): Any {
         val callee = evaluate(expr.callee)
-
         val arguments = ArrayList<Any>()
+
         for (argument in expr.arguments) {
             arguments.add(evaluate(argument))
         }
@@ -145,16 +152,6 @@ class Interpreter : Expr.Visitor<Any> {
         }
 
         return callee.call(this, arguments)
-    }
-
-    override fun visitContinueExpr(expr: Expr.Continue): Any {
-        if (loopState != LoopState.InLoop) throw RuntimeError(expr.token, "Cannot continue outside of loops")
-        loopState = LoopState.ContinuedLoop
-        return GUnit()
-    }
-
-    override fun visitForLoopExpr(expr: Expr.ForLoop): Any {
-        TODO("Not yet implemented")
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Any {
@@ -199,29 +196,10 @@ class Interpreter : Expr.Visitor<Any> {
         if (expr.operator.type == OR) {
             if (left == true) return left
         } else {
-            if (left == true) return left
+            if (left == false) return left
         }
 
         return evaluate(expr.right)
-    }
-
-    override fun visitLoopExpr(expr: Expr.Loop): Any {
-        val lastLoopState = loopState
-        loopState = LoopState.InLoop
-        while (true) {
-            evaluate(expr.body)
-
-            if (loopState == LoopState.BrokenLoop) {
-                break
-            }
-
-            if (loopState == LoopState.ContinuedLoop) {
-                continue
-            }
-        }
-        loopState = lastLoopState
-
-        return GUnit()
     }
 
     override fun visitReturnExpr(expr: Expr.Return): Any {
@@ -245,23 +223,34 @@ class Interpreter : Expr.Visitor<Any> {
         return lookUpVariable(expr.name, expr)
     }
 
-    override fun visitWhileExpr(expr: Expr.While): Any {
-        val lastLoopState = loopState
-        loopState = LoopState.InLoop
-        while (evaluate(expr.condition) == true) {
+    // Loops
+
+    override fun visitLoopExpr(expr: Expr.Loop): Any {
+        return withLoop {
             evaluate(expr.body)
-
-            if (loopState == LoopState.BrokenLoop) {
-                break
-            }
-
-            if (loopState == LoopState.ContinuedLoop) {
-                continue
-            }
+            return@withLoop LoopReturn.Ongoing
         }
-        loopState = lastLoopState
+    }
 
-        return GUnit()
+    override fun visitWhileExpr(expr: Expr.While): Any {
+        return withLoop {
+            if (evaluate(expr.condition) == true) return@withLoop LoopReturn.Done
+            evaluate(expr.body)
+            return@withLoop LoopReturn.Ongoing
+        }
+    }
+
+    override fun visitForLoopExpr(expr: Expr.ForLoop): Any {
+        val iterator = checkIterable(expr.iterator, expr.iterator.literal as Iterable<*>)
+        val env = Environment(environment)
+        env.define(expr.name.lexeme, null)
+
+        return withLoop {
+            val item = iterator.next() ?: return@withLoop LoopReturn.Done
+            env.assign(expr.name, item)
+            evaluateBlock(expr.body, env)
+            return@withLoop LoopReturn.Ongoing
+        }
     }
 
     private fun lookUpVariable(name: Token, expr: Expr): Any {
@@ -273,6 +262,11 @@ class Interpreter : Expr.Visitor<Any> {
         }
 
         return value ?: throw RuntimeError(name, "Undefined variable")
+    }
+
+    private fun checkIterable(token: Token, maybeIterator: Any): Iterable<*> {
+        if (maybeIterator is Iterable<*>) return maybeIterator
+        throw RuntimeError(token, "Operand must be an iterator")
     }
 
     private fun checkBooleanOperand(operator: Token, operand: Any): Boolean {
@@ -306,16 +300,18 @@ class Interpreter : Expr.Visitor<Any> {
         return expr.accept(this)
     }
 
-    internal fun evaluateBlock(expressions: List<Expr>, environment: Environment) {
+    internal fun evaluateBlock(expressions: List<Expr>, environment: Environment): Any {
         val previous = this.environment
         try {
             this.environment = environment
 
+            var ret: Any? = null
             for (expression in expressions) {
-                // TODO
-//                if (statement is Expr.Break) break
-                evaluate(expression)
+                if (expression is Expr.Break) break
+                ret = evaluate(expression)
             }
+
+            return ret ?: GUnit()
         } finally {
             this.environment = previous
         }
@@ -325,11 +321,31 @@ class Interpreter : Expr.Visitor<Any> {
         locals[expr] = depth
     }
 
-    private fun isEqual(a: Any, b: Any): Boolean {
-        return a == b
+    override fun visitBlockExpr(expr: Expr.Block) {
+        evaluateBlock(expr.expressions, Environment(environment))
     }
 
-    override fun visitBlockExpr(expr: Expr.Block) {
-        evaluateBlock(expr.statements, Environment(environment))
+    /**
+     * Helper function that runs the given closure as a loop, returning a `GUnit` when it has completed
+     */
+    private fun withLoop(l: () -> LoopReturn): GUnit {
+        val lastLoopState = loopState
+        loopState = LoopState.InLoop
+
+        try {
+            while (true) {
+                try {
+                    l()
+                } catch (_: Continue) {
+
+                } catch (_: Break) {
+                    break
+                }
+            }
+        } finally {
+            loopState = lastLoopState
+        }
+
+        return GUnit()
     }
 }

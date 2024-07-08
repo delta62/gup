@@ -32,7 +32,7 @@ sealed class Expr {
         }
     }
 
-    data class Block(val statements: List<Expr>) : Expr() {
+    data class Block(val expressions: List<Expr>) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitBlockExpr(this)
         }

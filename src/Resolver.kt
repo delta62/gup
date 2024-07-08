@@ -111,7 +111,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
 
     override fun visitBlockExpr(expr: Expr.Block) {
         beginScope()
-        resolve(expr.statements)
+        resolve(expr.expressions)
         endScope()
     }
 

@@ -1,4 +1,4 @@
-if true
+if true then
     assertEqual(true, true)
 else
     assertEqual(false, true)
