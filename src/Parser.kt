@@ -51,7 +51,11 @@ class Parser(private val tokens: List<Token>) {
         consume(IN, "Expected 'in' in for expression")
         val iterable = expression()
         skipWhitespace()
-        val body = block(END)
+        val body = if (match(ARROW)) {
+            listOf(expression())
+        } else {
+            block(END)
+        }
 
         return Expr.ForLoop(name, iterable, body)
     }
