@@ -1,0 +1,2 @@
+let x = 0x10
+assertEqual(x, 16)

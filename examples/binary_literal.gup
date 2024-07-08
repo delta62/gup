@@ -1,0 +1,2 @@
+let x = 0b11
+assertEqual(x, 3)

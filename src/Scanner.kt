@@ -1,4 +1,5 @@
 import TokenType.*
+import error.ScanError
 
 class Scanner(private val source: String) {
     private var start = 0
@@ -152,14 +153,41 @@ class Scanner(private val source: String) {
     }
 
     private fun number() {
-        while (peek().isDigit()) advance()
-
-        if (peek() == '.' && peekNext().isDigit()) {
-            advance()
-            while (peek().isDigit()) advance()
+        val radix = if (previous() == '0') {
+            when (val c = peek()) {
+                'x' -> 16
+                'o' -> 8
+                'b' -> 2
+                else -> {
+                    if (c.isDigit()) {
+                        Gup.error(line, "Numbers starting with '0' must be followed with 'x', 'o', or 'b'")
+                        throw ScanError()
+                    } else {
+                        10
+                    }
+                }
+            }
+        } else {
+            10
         }
 
-        addToken(NUMBER, source.substring(start..<current).toDouble())
+        if (radix != 10) advance()
+        while (peek().isDigit()) advance()
+
+        val num = if (radix != 10) {
+            start += 2
+            source.substring(start..<current).toLong(radix).toDouble()
+        } else {
+            // Base 10 can have decimal points
+            if (peek() == '.' && peekNext().isDigit()) {
+                advance()
+                while (peek().isDigit()) advance()
+            }
+
+            source.substring(start..<current).toDouble()
+        }
+
+        addToken(NUMBER, num)
     }
 
     private fun identifier() {
@@ -185,6 +213,10 @@ class Scanner(private val source: String) {
 
         current++
         return true
+    }
+
+    private fun previous(): Char {
+        return source[current - 1]
     }
 
     private fun peek(): Char {
