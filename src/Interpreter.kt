@@ -74,6 +74,25 @@ class Interpreter : Expr.Visitor<Any> {
                 l % r
             }
 
+            DOT -> {
+                val lName = (expr.left as Expr.Variable).name
+                val rName = (expr.right as Expr.Variable).name
+
+                val l = environment.get(lName) as Function
+                val r = environment.get(rName) as Function
+
+                return object : Callable {
+                    override fun arity(): Int {
+                        return l.arity()
+                    }
+
+                    override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
+                        val rResult = r.call(interpreter, arguments)
+                        return l.call(interpreter, listOf(rResult))
+                    }
+                }
+            }
+
             AMPERSAND -> {
                 val (l, r) = checkIntegerOperands(expr.operator, left, right)
                 l.and(r).toDouble()

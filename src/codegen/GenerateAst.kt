@@ -1,7 +1,6 @@
 package codegen
 
 import java.io.PrintWriter
-import java.util.*
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -12,7 +11,7 @@ fun main(args: Array<String>) {
 
     val outputDir = args[0]
 
-    defineAst(outputDir, "Expr", listOf(
+    defineAst(outputDir, listOf(
         "Assign   : val name: Token, val value: Expr",
         "Binary   : val left: Expr, val operator: Token, val right: Expr",
         "Block    : val expressions: List<Expr>",
@@ -36,21 +35,21 @@ fun main(args: Array<String>) {
     println("Done!")
 }
 
-private fun defineAst(outputDir: String, baseName: String, types: List<String>) {
-    val path = "$outputDir/$baseName.kt"
+private fun defineAst(outputDir: String, types: List<String>) {
+    val path = "$outputDir/Expr.kt"
     val writer = PrintWriter(path, "UTF-8")
 
     println("Generating $path")
 
-    writer.println("sealed class $baseName {")
+    writer.println("sealed class Expr {")
 
-    defineVisitor(writer, baseName, types)
+    defineVisitor(writer, types)
 
     for (type in types) {
         var (className, fields) = type.split(':', limit = 2)
         className = className.trim()
         fields = fields.trimStart()
-        defineType(writer, baseName, className, fields)
+        defineType(writer, className, fields)
     }
 
     writer.println("    abstract fun <R> accept(visitor: Visitor<R>): R")
@@ -59,22 +58,23 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
     writer.close()
 }
 
-private fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
-    println("  Generating $baseName.$className")
-    writer.println("    data class $className($fieldList) : $baseName() {")
+private fun defineType(writer: PrintWriter, className: String, fieldList: String) {
+    println("  Generating Expr.$className")
+
+    writer.println("    data class $className($fieldList) : Expr() {")
     writer.println("        override fun <R> accept(visitor: Visitor<R>): R {")
-    writer.println("            return visitor.visit$className$baseName(this)")
+    writer.println("            return visitor.visit${className}Expr(this)")
     writer.println("        }")
     writer.println("    }")
     writer.println()
 }
 
-private fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
+private fun defineVisitor(writer: PrintWriter, types: List<String>) {
     writer.println("    interface Visitor<R> {")
 
     for (type in types) {
         val typeName = type.split(':')[0].trim()
-        writer.println("        fun visit$typeName$baseName(${baseName.lowercase(Locale.getDefault())}: $typeName): R")
+        writer.println("        fun visit${typeName}Expr(expr: $typeName): R")
     }
 
     writer.println("    }")

@@ -251,7 +251,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun call(): Expr {
-        var expr = primary()
+        var expr = compose()
 
         while (true) {
             if (match(LEFT_PAREN)) {
@@ -259,6 +259,18 @@ class Parser(private val tokens: List<Token>) {
             } else {
                 break
             }
+        }
+
+        return expr
+    }
+
+    private fun compose(): Expr {
+        var expr = primary()
+
+        while (match(DOT)) {
+            val operator = previous()
+            val right = primary()
+            expr = Expr.Binary(expr, operator, right)
         }
 
         return expr
@@ -383,7 +395,9 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun skipWhitespace() {
-        while (match(NEWLINE)) { }
+        while (match(NEWLINE)) {
+            // Skip newlines
+        }
     }
 
     private fun advance(): Token {
