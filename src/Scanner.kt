@@ -171,20 +171,30 @@ class Scanner(private val source: String) {
             10
         }
 
-        if (radix != 10) advance()
-        while (peek().isDigit()) advance()
+        if (radix != 10) {
+            advance()
+            start += 2
+        }
+
+        while (peek().isDigit() || peek() == '_') advance()
+
 
         val num = if (radix != 10) {
-            start += 2
-            source.substring(start..<current).toLong(radix).toDouble()
+            source
+                .substring(start..<current)
+                .replace("_", "")
+                .toLong(radix).toDouble()
         } else {
             // Base 10 can have decimal points
             if (peek() == '.' && peekNext().isDigit()) {
                 advance()
-                while (peek().isDigit()) advance()
+                while (peek().isDigit() || peek() == '_') advance()
             }
 
-            source.substring(start..<current).toDouble()
+            source
+                .substring(start..<current)
+                .replace("_", "")
+                .toDouble()
         }
 
         addToken(NUMBER, num)
