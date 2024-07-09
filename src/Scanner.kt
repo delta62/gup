@@ -1,5 +1,6 @@
 import TokenType.*
 import error.ScanError
+import kotlin.math.pow
 
 class Scanner(private val source: String) {
     private var start = 0
@@ -191,10 +192,30 @@ class Scanner(private val source: String) {
                 while (peek().isDigit() || peek() == '_') advance()
             }
 
-            source
+            var x = source
                 .substring(start..<current)
                 .replace("_", "")
                 .toDouble()
+
+            // 1.23e-4
+            if (peek() == 'e' && (peekNext() == '-' || peekNext().isDigit())) {
+                advance()
+                val multiplier = if (peek() == '-') {
+                    advance()
+                    -1
+                } else 1
+
+                start = current
+                while (peek().isDigit() || peek() == '_') advance()
+                val exponent = source
+                    .substring(start..<current)
+                    .replace("_", "")
+                    .toDouble()
+
+                x *= 10.0.pow(exponent * multiplier)
+            }
+
+            x
         }
 
         addToken(NUMBER, num)

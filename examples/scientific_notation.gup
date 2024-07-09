@@ -1,0 +1,2 @@
+let x = 7.6e-4
+assertEqual(x, 0.00076)
