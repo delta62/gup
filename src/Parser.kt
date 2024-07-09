@@ -324,6 +324,26 @@ class Parser(private val tokens: List<Token>) {
             return Expr.Literal(previous().literal!!)
         }
 
+        if (match(STRING_HEAD)) {
+            val parts = ArrayList<TemplateString>()
+            parts.add(TemplateString.Text(previous().literal as String))
+
+            while (true) {
+                parts.add(TemplateString.Expression(expression()))
+
+                if (match(STRING_END)) {
+                    parts.add(TemplateString.Text(previous().literal as String))
+                    break
+                } else if (match(STRING_MIDDLE)) {
+                    parts.add(TemplateString.Text(previous().literal as String))
+                } else {
+                    throw error(previous(), "Expected '}'")
+                }
+            }
+
+            return Expr.Template(parts)
+        }
+
         if (match(IDENTIFIER)) {
             return Expr.Variable(previous())
         }

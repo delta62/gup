@@ -27,6 +27,7 @@ fun main(args: Array<String>) {
         "Logical  : val left: Expr, val operator: Token, val right: Expr",
         "Loop     : val body: Expr",
         "Return   : val keyword: Token, val value: Expr",
+        "Template : val parts: List<TemplateString>",
         "Unary    : val operator: Token, val right: Expr",
         "Variable : val name: Token",
         "While    : val condition: Expr, val body: List<Expr>",

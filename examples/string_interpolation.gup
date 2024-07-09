@@ -1,0 +1,4 @@
+let name = "Gup"
+let sandwichCount = 14
+let str = "My name is #{name} and I've got #{sandwichCount} sandwiches"
+assertEqual(str, "My name is Gup and I've got 14.0 sandwiches")

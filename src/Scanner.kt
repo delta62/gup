@@ -6,6 +6,7 @@ class Scanner(private val source: String) {
     private var start = 0
     private var current = 0
     private var line = 1
+    private var inInterpolation = false
     private val tokens = ArrayList<Token>()
 
     companion object {
@@ -47,8 +48,6 @@ class Scanner(private val source: String) {
         when (val c = advance()) {
             '(' -> addToken(LEFT_PAREN)
             ')' -> addToken(RIGHT_PAREN)
-            '{' -> addToken(LEFT_BRACE)
-            '}' -> addToken(RIGHT_BRACE)
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
             '~' -> addToken(TILDE)
@@ -59,6 +58,8 @@ class Scanner(private val source: String) {
             '|' -> addToken(PIPE)
             '&' -> addToken(AMPERSAND)
             '%' -> addToken(PERCENT)
+            '{' -> addToken(LEFT_BRACE)
+            '}' -> scanRightBrace()
             '.' -> scanDot()
             '-' -> scanMinus()
             '<' -> scanLess()
@@ -137,20 +138,52 @@ class Scanner(private val source: String) {
     }
 
     private fun string() {
-        while (peek() != '"' && !isAtEnd()) {
+        if (inInterpolation && previous() != '}') {
+            Gup.error(line, "Cannot embed string literals inside of string interpolation")
+            return
+        }
+
+        val wasInInterpolation = inInterpolation
+        inInterpolation = false
+
+        while (true) {
+            if (peek() == '"') {
+                advance()
+                break
+            }
+
+            if (isAtEnd()) {
+                Gup.error(line, "Unterminated string")
+                return
+            }
+
+            if (peek() == '#' && peekNext() == '{') {
+                inInterpolation = true
+                val value = source.substring(start + 1..<current)
+                advance()
+                advance()
+
+                val tokenType = if (wasInInterpolation) STRING_MIDDLE else STRING_HEAD
+                return addToken(tokenType, value)
+            }
+
             if (peek() == '\n') line++
             advance()
         }
 
-        if (isAtEnd()) {
-            Gup.error(line, "Unterminated string")
-            return
-        }
-
-        advance()
-
         val value = source.substring(start + 1..<current - 1)
-        addToken(STRING, value)
+        val tokenType = if (wasInInterpolation) STRING_END else STRING
+        addToken(tokenType, value)
+    }
+
+    private fun scanRightBrace() {
+        if (inInterpolation) return string()
+        return addToken(RIGHT_BRACE)
+
+    }
+
+    private fun isTemplateStart(): Boolean {
+        return peek() == '#' && peekNext() == '{'
     }
 
     private fun number() {

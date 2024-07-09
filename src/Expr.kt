@@ -15,6 +15,7 @@ sealed class Expr {
         fun visitLogicalExpr(expr: Logical): R
         fun visitLoopExpr(expr: Loop): R
         fun visitReturnExpr(expr: Return): R
+        fun visitTemplateExpr(expr: Template): R
         fun visitUnaryExpr(expr: Unary): R
         fun visitVariableExpr(expr: Variable): R
         fun visitWhileExpr(expr: While): R
@@ -107,6 +108,12 @@ sealed class Expr {
     data class Return(val keyword: Token, val value: Expr) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitReturnExpr(this)
+        }
+    }
+
+    data class Template(val parts: List<TemplateString>) : Expr() {
+        override fun <R> accept(visitor: Visitor<R>): R {
+            return visitor.visitTemplateExpr(this)
         }
     }
 

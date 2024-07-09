@@ -239,6 +239,19 @@ class Interpreter : Expr.Visitor<Any> {
         throw Return(value)
     }
 
+    override fun visitTemplateExpr(expr: Expr.Template): Any {
+        val builder = StringBuilder()
+        for (part in expr.parts) {
+            val text = when (part) {
+                is TemplateString.Expression -> evaluate(part.expression).toString()
+                is TemplateString.Text -> part.text
+            }
+            builder.append(text)
+        }
+
+        return builder.toString()
+    }
+
     override fun visitUnaryExpr(expr: Expr.Unary): Any {
         val right = evaluate(expr.right)
 

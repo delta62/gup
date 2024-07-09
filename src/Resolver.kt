@@ -95,6 +95,8 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
         resolve(expr.value)
     }
 
+    override fun visitTemplateExpr(expr: Expr.Template) { }
+
     override fun visitUnaryExpr(expr: Expr.Unary) {
         resolve(expr.right)
     }
