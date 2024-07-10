@@ -20,9 +20,7 @@ class Interpreter : Expr.Visitor<Any> {
 
     fun interpret(statements: List<Expr>) {
         try {
-            for (statement in statements) {
-                evaluate(statement)
-            }
+            for (statement in statements) evaluate(statement)
         } catch (error: RuntimeError) {
             Gup.runtimeError(error)
         }
@@ -42,35 +40,22 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Any {
-        val left = evaluate(expr.left)
-        val right = evaluate(expr.right)
-
         return when (expr.operator.type) {
-            MINUS -> left as Double - right as Double
-            PLUS -> {
-                if (left is Double && right is Double) {
-                    left + right
-                } else if (left is String && right is String) {
-                    left + right
-                } else {
-                    throw Unreachable()
-                }
-            }
-
-            SLASH -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l / r
-            }
-
-            STAR -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l * r
-            }
-
-            PERCENT -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l % r
-            }
+            AMPERSAND -> intOperation(expr) { l, r -> l.and(r).toDouble() }
+            CARET -> intOperation(expr) { l, r -> l.xor(r).toDouble() }
+            GREATER -> numOperation(expr) { l, r -> l > r }
+            GREATER_EQ -> numOperation(expr) { l, r -> l >= r }
+            GREATER_GREATER -> intOperation(expr) { l, r -> l.shr(r).toDouble() }
+            IS -> evaluate(expr.left) == evaluate(expr.right)
+            ISNT -> evaluate(expr.left) != evaluate(expr.right)
+            LESS -> numOperation(expr) { l, r -> l < r }
+            LESS_EQ -> numOperation(expr) { l, r -> l <= r }
+            LESS_LESS -> intOperation(expr) { l, r -> l.shl(r).toDouble() }
+            MINUS -> numOperation(expr) { l, r -> l - r }
+            PERCENT -> numOperation(expr) { l, r -> l % r }
+            PIPE -> intOperation(expr) { l, r -> l.or(r).toDouble() }
+            SLASH -> numOperation(expr) { l, r -> l / r }
+            STAR -> numOperation(expr) { l, r -> l * r }
 
             DOT -> {
                 val lName = (expr.left as Expr.Variable).name
@@ -91,59 +76,22 @@ class Interpreter : Expr.Visitor<Any> {
                 }
             }
 
-            DOT_DOT, DOT_DOT_EQ -> {
-                var (min, max) = checkIntegerOperands(expr.operator, left, right)
-                if (expr.operator.type == DOT_DOT_EQ) { max += 1 }
-                Range(min, max)
+            DOT_DOT, DOT_DOT_EQ -> intOperation(expr) { min, max ->
+                val rangeMax = if (expr.operator.type == DOT_DOT) max else max + 1
+                val range = Range(min, rangeMax)
+                environment.defineExpr(expr, range)
+                range
             }
 
-            AMPERSAND -> {
-                val (l, r) = checkIntegerOperands(expr.operator, left, right)
-                l.and(r).toDouble()
+            PLUS -> {
+                val left = evaluate(expr.left)
+                val right = evaluate(expr.right)
+
+                if (left is Double && right is Double) left + right
+                else if (left is String && right is String) left + right
+                else throw Unreachable()
             }
 
-            PIPE -> {
-                val (l, r) = checkIntegerOperands(expr.operator, left, right)
-                l.or(r).toDouble()
-            }
-
-            CARET -> {
-                val (l, r) = checkIntegerOperands(expr.operator, left, right)
-                l.xor(r).toDouble()
-            }
-
-            GREATER -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l > r
-            }
-
-            GREATER_GREATER -> {
-                val (l, r) = checkIntegerOperands(expr.operator, left, right)
-                l.shr(r).toDouble()
-            }
-
-            GREATER_EQ -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l >= r
-            }
-
-            LESS -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l < r
-            }
-
-            LESS_EQ -> {
-                val (l, r) = checkNumberOperands(expr.operator, left, right)
-                l <= r
-            }
-
-            LESS_LESS -> {
-                val (l, r) = checkIntegerOperands(expr.operator, left, right)
-                l.shl(r).toDouble()
-            }
-
-            ISNT -> left != right
-            IS -> left == right
             else -> throw Unreachable()
         }
     }
@@ -251,10 +199,10 @@ class Interpreter : Expr.Visitor<Any> {
         val right = evaluate(expr.right)
 
         return when (expr.operator.type) {
-            NOT -> !checkBooleanOperand(expr.operator, right)
-            MINUS -> -checkNumberOperand(expr.operator, right)
-            PLUS -> checkNumberOperand(expr.operator, right)
-            TILDE -> checkIntegerOperand(expr.operator, right).inv().toDouble()
+            NOT -> !TypeCheck.checkBooleanOperand(expr.operator, right)
+            MINUS -> -TypeCheck.checkNumberOperand(expr.operator, right)
+            PLUS -> TypeCheck.checkNumberOperand(expr.operator, right)
+            TILDE -> TypeCheck.checkIntegerOperand(expr.operator, right).inv().toDouble()
             else -> throw Unreachable()
         }
     }
@@ -291,35 +239,24 @@ class Interpreter : Expr.Visitor<Any> {
         return value ?: throw RuntimeError(name, "Undefined variable")
     }
 
-    private fun checkBooleanOperand(operator: Token, operand: Any): Boolean {
-        if (operand is Boolean) return operand
-        throw RuntimeError(operator, "Operand must be a boolean")
+    private fun intOperation(expr: Expr.Binary, c: (left: Int, right: Int) -> Any): Any {
+        val left = evaluate(expr.left)
+        val right = evaluate(expr.right)
+        val (l, r) = TypeCheck.checkNumberOperands(expr.operator, left, right)
+        if (l % 1 != 0.0 && r % 1 != 0.0) throw RuntimeError(expr.operator, "Operands must be integers")
+
+        return c(l.toInt(), r.toInt())
     }
 
-    private fun checkNumberOperand(operator: Token, operand: Any): Double {
-        if (operand is Double) return operand
-        throw RuntimeError(operator, "Operand must be a number")
-    }
-
-    private fun checkNumberOperands(operator: Token, left: Any, right: Any): Pair<Double, Double> {
-        if (left is Double && right is Double) return Pair(left, right)
-        throw RuntimeError(operator, "Operands must be numbers")
-    }
-
-    private fun checkIntegerOperands(operator: Token, left: Any, right: Any): Pair<Int, Int> {
-        val (l, r) = checkNumberOperands(operator, left, right)
-        if (l % 1 == 0.0 && r % 1 == 0.0) return Pair(l.toInt(), r.toInt())
-        throw RuntimeError(operator, "Operands must be integers")
-    }
-
-    private fun checkIntegerOperand(operator: Token, right: Any): Int {
-        val r = checkNumberOperand(operator, right)
-        if (r % 1 == 0.0) return r.toInt()
-        throw RuntimeError(operator, "Operand must be an integer")
+    private fun numOperation(expr: Expr.Binary, c: (left: Double, right: Double) -> Any): Any {
+        val left = evaluate(expr.left)
+        val right = evaluate(expr.right)
+        val (l, r) = TypeCheck.checkNumberOperands(expr.operator, left, right)
+        return c(l, r)
     }
 
     private fun evaluate(expr: Expr): Any {
-        return expr.accept(this)
+        return environment.recallExpr(expr) ?: expr.accept(this)
     }
 
     internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {

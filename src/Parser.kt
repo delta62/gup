@@ -51,26 +51,14 @@ class Parser(private val tokens: List<Token>) {
         val inToken = consume(IN, "Expected 'in' in for expression")
         val iterable = expression()
         skipWhitespace()
-        val body = if (match(ARROW)) {
-            Expr.Block(listOf(expression()))
-        } else {
-            block(END)
-        }
-
-        /* {
-         *     let {name} = next({iterable})
-         *     while {name} isnt unit
-         *         {body}
-         *         name = next({iterable})
-         *     end
-         * }
-         */
+        var body = if (match(ARROW)) blockOf(expression()) else block(END)
 
         val initializer = Expr.Let(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
-        val increment = Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable))
-        val bodyWithIncrement = Expr.Block(listOf(body, increment))
+        val increment = Expr.Assign(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
         val condition = Expr.Binary(Expr.Variable(name), Token(ISNT, "isnt", null, name.line), Expr.Literal(GUnit()))
-        val loop = Expr.Loop(condition, bodyWithIncrement)
+
+        body = Expr.Block(listOf(body, increment))
+        val loop = Expr.Loop(condition, body)
 
         return Expr.Block(listOf(initializer, loop))
     }
@@ -125,6 +113,10 @@ class Parser(private val tokens: List<Token>) {
 
         consume("Unterminated block", *terminals)
         return Expr.Block(expressions)
+    }
+
+    private fun blockOf(expr: Expr): Expr.Block {
+        return Expr.Block(listOf(expr))
     }
 
     private fun assignment(): Expr {

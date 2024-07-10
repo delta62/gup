@@ -2,9 +2,26 @@ import error.RuntimeError
 
 class Environment(private val enclosing: Environment? = null) {
     private val values = HashMap<String, Any?>()
+    private val expressionCache = HashMap<Expr, Any>()
 
     fun define(name: String, value: Any? = null) {
         values[name] = value
+    }
+
+    fun defineExpr(expr: Expr, value: Any) {
+        expressionCache[expr] = value
+    }
+
+    fun recallExpr(expr: Expr): Any? {
+        if (expressionCache.containsKey(expr)) {
+            return expressionCache[expr]
+        }
+
+        if (enclosing != null) {
+            return enclosing.recallExpr(expr)
+        }
+
+        return null
     }
 
     private fun ancestor(distance: Int): Environment {
