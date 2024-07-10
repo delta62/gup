@@ -35,10 +35,15 @@ fun main(args: Array<String>) {
 }
 
 private fun defineAst(outputDir: String, types: List<String>) {
-    val path = "$outputDir/Expr.kt"
+    val path = "$outputDir/generated/Expr.kt"
     val writer = PrintWriter(path, "UTF-8")
 
     println("Generating $path")
+
+    writer.println("package generated")
+    writer.println()
+    writer.println("import TemplateString")
+    writer.println("import Token")
 
     writer.println("sealed class Expr {")
 

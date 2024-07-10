@@ -1,3 +1,5 @@
+import generated.Expr
+
 class Function(private val declaration: Expr.Function, private val closure: Environment) : Callable {
     override fun arity(): Int {
         return declaration.params.size

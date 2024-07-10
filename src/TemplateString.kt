@@ -1,3 +1,5 @@
+import generated.Expr
+
 sealed class TemplateString {
     class Expression(val expression: Expr) : TemplateString()
     class Text(val text: String) : TemplateString()

@@ -1,4 +1,5 @@
 import error.RuntimeError
+import generated.Expr
 
 class Environment(private val enclosing: Environment? = null) {
     private val values = HashMap<String, Any?>()

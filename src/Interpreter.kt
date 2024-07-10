@@ -3,6 +3,7 @@ import error.Break
 import error.Continue
 import error.RuntimeError
 import error.Unreachable
+import generated.Expr
 import std.*
 
 class Interpreter : Expr.Visitor<Any> {

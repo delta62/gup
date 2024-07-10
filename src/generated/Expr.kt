@@ -1,3 +1,7 @@
+package generated
+
+import TemplateString
+import Token
 sealed class Expr {
     interface Visitor<R> {
         fun visitAssignExpr(expr: Assign): R
