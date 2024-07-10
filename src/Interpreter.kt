@@ -3,10 +3,7 @@ import error.Break
 import error.Continue
 import error.RuntimeError
 import error.Unreachable
-import std.AssertEqual
-import std.Epoch
-import std.Iterable
-import std.PrintLine
+import std.*
 
 class Interpreter : Expr.Visitor<Any> {
     private val globals = Environment()
@@ -17,6 +14,7 @@ class Interpreter : Expr.Visitor<Any> {
     init {
         globals.define("assertEqual", AssertEqual())
         globals.define("epoch", Epoch())
+        globals.define("next", Next())
         globals.define("println", PrintLine())
     }
 
@@ -94,12 +92,9 @@ class Interpreter : Expr.Visitor<Any> {
             }
 
             DOT_DOT, DOT_DOT_EQ -> {
-                val (min, max) = checkIntegerOperands(expr.operator, left, right)
-                if (expr.operator.type == DOT_DOT) {
-                    Range(min, max)
-                } else {
-                    Range(min, max + 1)
-                }
+                var (min, max) = checkIntegerOperands(expr.operator, left, right)
+                if (expr.operator.type == DOT_DOT_EQ) { max += 1 }
+                Range(min, max)
             }
 
             AMPERSAND -> {
@@ -268,35 +263,21 @@ class Interpreter : Expr.Visitor<Any> {
         return lookUpVariable(expr.name, expr)
     }
 
-    // Loops
-
     override fun visitLoopExpr(expr: Expr.Loop): Any {
-        return withLoop {
-            evaluate(expr.body)
-            return@withLoop LoopReturn.Ongoing
-        }
-    }
+        val lastLoopState = loopState
+        loopState = LoopState.InLoop
 
-    override fun visitWhileExpr(expr: Expr.While): Any {
-        return withLoop {
-            if (evaluate(expr.condition) == false) return@withLoop LoopReturn.Done
-            evaluateBlock(expr.body, Environment(environment))
-            return@withLoop LoopReturn.Ongoing
+        try {
+            while (evaluate(expr.condition) == true) {
+                try { evaluate(expr.body) }
+                catch (_: Continue) {}
+                catch (_: Break) { break }
+            }
+        } finally {
+            loopState = lastLoopState
         }
-    }
 
-    override fun visitForLoopExpr(expr: Expr.ForLoop): Any {
-        val iterator = checkIterable(expr.name, evaluate(expr.iterator))
-        val env = Environment(environment)
-        var item = iterator.next() ?: return GUnit()
-        env.define(expr.name.lexeme, item)
-
-        return withLoop {
-            env.assign(expr.name, item)
-            evaluateBlock(expr.body, env)
-            item = iterator.next() ?: return@withLoop LoopReturn.Done
-            return@withLoop LoopReturn.Ongoing
-        }
+        return GUnit()
     }
 
     private fun lookUpVariable(name: Token, expr: Expr): Any {
@@ -308,11 +289,6 @@ class Interpreter : Expr.Visitor<Any> {
         }
 
         return value ?: throw RuntimeError(name, "Undefined variable")
-    }
-
-    private fun checkIterable(token: Token, maybeIterator: Any): Iterable<*> {
-        if (maybeIterator is Iterable<*>) return maybeIterator
-        throw RuntimeError(token, "Operand must be an iterator")
     }
 
     private fun checkBooleanOperand(operator: Token, operand: Any): Boolean {
@@ -346,13 +322,13 @@ class Interpreter : Expr.Visitor<Any> {
         return expr.accept(this)
     }
 
-    internal fun evaluateBlock(expressions: List<Expr>, environment: Environment): Any {
+    internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {
         val previous = this.environment
         try {
             this.environment = environment
 
             var ret: Any? = null
-            for (expression in expressions) {
+            for (expression in block.expressions) {
                 if (expression is Expr.Break) break
                 ret = evaluate(expression)
             }
@@ -368,30 +344,6 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     override fun visitBlockExpr(expr: Expr.Block) {
-        evaluateBlock(expr.expressions, Environment(environment))
-    }
-
-    /**
-     * Helper function that runs the given closure as a loop, returning a `GUnit` when it has completed
-     */
-    private fun withLoop(l: () -> LoopReturn): GUnit {
-        val lastLoopState = loopState
-        loopState = LoopState.InLoop
-
-        try {
-            while (true) {
-                try {
-                    if (l() == LoopReturn.Done) break
-                } catch (_: Continue) {
-
-                } catch (_: Break) {
-                    break
-                }
-            }
-        } finally {
-            loopState = lastLoopState
-        }
-
-        return GUnit()
+        evaluateBlock(expr, Environment(environment))
     }
 }

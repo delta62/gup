@@ -29,14 +29,6 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
 
     override fun visitContinueExpr(expr: Expr.Continue) { }
 
-    override fun visitForLoopExpr(expr: Expr.ForLoop) {
-        beginScope()
-        declare(expr.name)
-        define(expr.name)
-        resolve(expr.body)
-        endScope()
-    }
-
     override fun visitFunctionExpr(expr: Expr.Function) {
         if (expr.name != null) {
             declare(expr.name)
@@ -84,6 +76,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     }
 
     override fun visitLoopExpr(expr: Expr.Loop) {
+        resolve(expr.condition)
         resolve(expr.body)
     }
 
@@ -107,11 +100,6 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
         }
 
         resolveLocal(expr, expr.name)
-    }
-
-    override fun visitWhileExpr(expr: Expr.While) {
-        resolve(expr.condition)
-        resolve(expr.body)
     }
 
     override fun visitBlockExpr(expr: Expr.Block) {

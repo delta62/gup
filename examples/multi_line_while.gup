@@ -1,0 +1,9 @@
+let sum = 2
+
+while sum < 20
+    let lastSum = sum
+    let squared = sum * sum
+    sum = lastSum + squared
+end
+
+assertEqual(sum, 42)

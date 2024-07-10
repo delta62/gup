@@ -6,7 +6,6 @@ sealed class Expr {
         fun visitBreakExpr(expr: Break): R
         fun visitCallExpr(expr: Call): R
         fun visitContinueExpr(expr: Continue): R
-        fun visitForLoopExpr(expr: ForLoop): R
         fun visitFunctionExpr(expr: Function): R
         fun visitGroupingExpr(expr: Grouping): R
         fun visitIfExpr(expr: If): R
@@ -18,7 +17,6 @@ sealed class Expr {
         fun visitTemplateExpr(expr: Template): R
         fun visitUnaryExpr(expr: Unary): R
         fun visitVariableExpr(expr: Variable): R
-        fun visitWhileExpr(expr: While): R
     }
 
     data class Assign(val name: Token, val value: Expr) : Expr() {
@@ -57,13 +55,7 @@ sealed class Expr {
         }
     }
 
-    data class ForLoop(val name: Token, val iterator: Expr, val body: List<Expr>) : Expr() {
-        override fun <R> accept(visitor: Visitor<R>): R {
-            return visitor.visitForLoopExpr(this)
-        }
-    }
-
-    data class Function(val name: Token?, val params: List<Token>, val body: List<Expr>) : Expr() {
+    data class Function(val name: Token?, val params: List<Token>, val body: Block) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitFunctionExpr(this)
         }
@@ -75,7 +67,7 @@ sealed class Expr {
         }
     }
 
-    data class If(val condition: Expr, val thenBranch: List<Expr>, val elseBranch: List<Expr>?) : Expr() {
+    data class If(val condition: Expr, val thenBranch: Block, val elseBranch: Block?) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitIfExpr(this)
         }
@@ -99,7 +91,7 @@ sealed class Expr {
         }
     }
 
-    data class Loop(val body: Expr) : Expr() {
+    data class Loop(val condition: Expr, val body: Block) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitLoopExpr(this)
         }
@@ -126,12 +118,6 @@ sealed class Expr {
     data class Variable(val name: Token) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitVariableExpr(this)
-        }
-    }
-
-    data class While(val condition: Expr, val body: List<Expr>) : Expr() {
-        override fun <R> accept(visitor: Visitor<R>): R {
-            return visitor.visitWhileExpr(this)
         }
     }
 

@@ -18,19 +18,17 @@ fun main(args: Array<String>) {
         "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
         "Continue : val token: Token",
-        "ForLoop  : val name: Token, val iterator: Expr, val body: List<Expr>",
-        "Function : val name: Token?, val params: List<Token>, val body: List<Expr>",
+        "Function : val name: Token?, val params: List<Token>, val body: Block",
         "Grouping : val expression: Expr",
-        "If       : val condition: Expr, val thenBranch: List<Expr>, val elseBranch: List<Expr>?",
+        "If       : val condition: Expr, val thenBranch: Block, val elseBranch: Block?",
         "Let      : val name: Token, val initializer: Expr?",
         "Literal  : val value: Any",
         "Logical  : val left: Expr, val operator: Token, val right: Expr",
-        "Loop     : val body: Expr",
+        "Loop     : val condition: Expr, val body: Block",
         "Return   : val keyword: Token, val value: Expr",
         "Template : val parts: List<TemplateString>",
         "Unary    : val operator: Token, val right: Expr",
         "Variable : val name: Token",
-        "While    : val condition: Expr, val body: List<Expr>",
     ))
 
     println("Done!")

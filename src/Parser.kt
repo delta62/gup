@@ -48,16 +48,31 @@ class Parser(private val tokens: List<Token>) {
 
     private fun forExpression(): Expr {
         val name = consume(IDENTIFIER, "Expected local binding in for expression")
-        consume(IN, "Expected 'in' in for expression")
+        val inToken = consume(IN, "Expected 'in' in for expression")
         val iterable = expression()
         skipWhitespace()
         val body = if (match(ARROW)) {
-            listOf(expression())
+            Expr.Block(listOf(expression()))
         } else {
             block(END)
         }
 
-        return Expr.ForLoop(name, iterable, body)
+        /* {
+         *     let {name} = next({iterable})
+         *     while {name} isnt unit
+         *         {body}
+         *         name = next({iterable})
+         *     end
+         * }
+         */
+
+        val initializer = Expr.Let(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
+        val increment = Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable))
+        val bodyWithIncrement = Expr.Block(listOf(body, increment))
+        val condition = Expr.Binary(Expr.Variable(name), Token(ISNT, "isnt", null, name.line), Expr.Literal(GUnit()))
+        val loop = Expr.Loop(condition, bodyWithIncrement)
+
+        return Expr.Block(listOf(initializer, loop))
     }
 
     private fun ifExpression(): Expr {
@@ -80,17 +95,17 @@ class Parser(private val tokens: List<Token>) {
     private fun whileExpression(): Expr {
         val condition = expression()
         val body = if (match(ARROW)) {
-            listOf(expression())
+            Expr.Block(listOf(expression()))
         } else {
             block(END)
         }
 
-        return Expr.While(condition, body)
+        return Expr.Loop(condition, body)
     }
 
     private fun loopExpression(): Expr {
-        val body = expression()
-        return Expr.Loop(body)
+        val body = Expr.Block(listOf(expression()))
+        return Expr.Loop(Expr.Literal(true), body)
     }
 
     private fun letExpression(): Expr {
@@ -101,7 +116,7 @@ class Parser(private val tokens: List<Token>) {
         return Expr.Let(name, initializer)
     }
 
-    private fun block(vararg terminals: TokenType): List<Expr> {
+    private fun block(vararg terminals: TokenType): Expr.Block {
         val expressions = ArrayList<Expr>()
         while (!check(*terminals) && !isAtEnd()) {
             expressions.add(expression())
@@ -109,7 +124,7 @@ class Parser(private val tokens: List<Token>) {
         }
 
         consume("Unterminated block", *terminals)
-        return expressions
+        return Expr.Block(expressions)
     }
 
     private fun assignment(): Expr {
@@ -382,7 +397,7 @@ class Parser(private val tokens: List<Token>) {
         val body = if (match(ARROW)) {
             val expr = expression()
             skipWhitespace()
-            listOf(expr)
+            Expr.Block(listOf(expr))
         } else {
             block(END)
         }
