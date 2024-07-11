@@ -175,6 +175,17 @@ class Scanner(private val source: String) {
                 else if (match('t')) builder.append('\t')
                 else if (match('\\')) builder.append('\\')
                 else if (match('"')) builder.append('"')
+                else if (match('u')) {
+                    val escapeBuffer = StringBuilder(6)
+                    consume('{')
+                    for (i in 0..<6) {
+                        if (peek() == '}') break
+                        escapeBuffer.append(advance())
+                    }
+                    val codePoint = escapeBuffer.toString().toInt(16)
+                    builder.appendCodePoint(codePoint)
+                    consume('}')
+                }
                 else return Gup.error(line, "Unknown escape sequence")
                 continue
             }
@@ -293,6 +304,11 @@ class Scanner(private val source: String) {
 
         current++
         return true
+    }
+
+    private fun consume(expected: Char) {
+        if (match(expected)) return
+        throw ScanError()
     }
 
     private fun previous(): Char {

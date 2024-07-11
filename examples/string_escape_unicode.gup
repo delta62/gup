@@ -1,0 +1,2 @@
+let str = "sun\u{1f60e}glasses"
+assertEqual(str, "sun😎glasses")
