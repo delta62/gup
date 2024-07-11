@@ -1,0 +1,6 @@
+let sum = 0
+loop
+    sum = sum + 1
+    if sum >= 3 then break end
+end
+assertEqual(sum, 3)

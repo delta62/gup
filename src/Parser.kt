@@ -93,7 +93,12 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun loopExpression(): Expr {
-        val body = Expr.Block(listOf(expression()))
+        val body = if (match(ARROW)) {
+            Expr.Block(listOf(expression()))
+        } else {
+            block(END)
+        }
+
         return Expr.Loop(Expr.Literal(true), body)
     }
 

@@ -264,7 +264,6 @@ class Interpreter : Expr.Visitor<Any> {
         return withEnvironment(environment) {
             var ret: Any? = null
             for (expression in block.expressions) {
-                if (expression is Expr.Break) break
                 ret = evaluate(expression)
             }
 
