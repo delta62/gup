@@ -13,7 +13,8 @@ class Function(private val declaration: Expr.Function, private val closure: Envi
         }
 
         return try {
-            interpreter.evaluateBlock(declaration.body, env)
+            val body = Expr.Block(declaration.body)
+            interpreter.evaluateBlock(body, env)
         } catch(returnValue: Return) {
             returnValue.value ?: GUnit()
         }

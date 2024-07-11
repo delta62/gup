@@ -59,7 +59,7 @@ sealed class Expr {
         }
     }
 
-    data class Function(val name: Token?, val params: List<Token>, val body: Block) : Expr() {
+    data class Function(val name: Token?, val params: List<Token>, val body: List<Expr>) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitFunctionExpr(this)
         }

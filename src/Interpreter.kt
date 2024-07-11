@@ -261,19 +261,25 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {
-        val previous = this.environment
-        try {
-            this.environment = environment
-
+        return withEnvironment(environment) {
             var ret: Any? = null
             for (expression in block.expressions) {
                 if (expression is Expr.Break) break
                 ret = evaluate(expression)
             }
 
-            return ret ?: GUnit()
+            return@withEnvironment ret ?: GUnit()
+        }
+    }
+
+    private fun <R> withEnvironment(env: Environment, action: () -> R): R {
+        val previous = environment
+        this.environment = env
+
+        try {
+            return action()
         } finally {
-            this.environment = previous
+            environment = previous
         }
     }
 

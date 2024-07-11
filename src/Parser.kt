@@ -390,9 +390,15 @@ class Parser(private val tokens: List<Token>) {
         val body = if (match(ARROW)) {
             val expr = expression()
             skipWhitespace()
-            Expr.Block(listOf(expr))
+            listOf(expr)
         } else {
-            block(END)
+            val expressions = ArrayList<Expr>()
+            while (!check(END) && !isAtEnd()) {
+                expressions.add(expression())
+                skipWhitespace()
+            }
+            consume("Unterminated block", END)
+            expressions
         }
 
         return Expr.Function(name, params, body)

@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
         "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
         "Continue : val token: Token",
-        "Function : val name: Token?, val params: List<Token>, val body: Block",
+        "Function : val name: Token?, val params: List<Token>, val body: List<Expr>",
         "Grouping : val expression: Expr",
         "If       : val condition: Expr, val thenBranch: Block, val elseBranch: Block?",
         "Let      : val name: Token, val initializer: Expr?",
