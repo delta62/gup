@@ -1,0 +1,3 @@
+let x = 12
+x /= 3
+assertEqual(x, 4)

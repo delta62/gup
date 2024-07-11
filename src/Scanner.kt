@@ -50,18 +50,18 @@ class Scanner(private val source: String) {
             ')' -> addToken(RIGHT_PAREN)
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
-            '~' -> addToken(TILDE)
-            '^' -> addToken(CARET)
-            '+' -> addToken(PLUS)
-            '*' -> addToken(STAR)
             '=' -> addToken(EQ)
-            '|' -> addToken(PIPE)
-            '&' -> addToken(AMPERSAND)
-            '%' -> addToken(PERCENT)
+            '~' -> scanOptionalAssignment(TILDE, TILDE_EQ)
+            '^' -> scanOptionalAssignment(CARET, CARET_EQ)
+            '+' -> scanOptionalAssignment(PLUS, PLUS_EQ)
+            '*' -> scanOptionalAssignment(STAR, STAR_EQ)
+            '|' -> scanOptionalAssignment(PIPE, PIPE_EQ)
+            '&' -> scanOptionalAssignment(AMPERSAND, AMPERSAND_EQ)
+            '%' -> scanOptionalAssignment(PERCENT, PERCENT_EQ)
+            '-' -> scanMinus()
             '{' -> addToken(LEFT_BRACE)
             '}' -> scanRightBrace()
             '.' -> scanDot()
-            '-' -> scanMinus()
             '<' -> scanLess()
             '>' -> scanGreater()
             '/' -> scanSlash()
@@ -74,6 +74,11 @@ class Scanner(private val source: String) {
                 else Gup.error(line, "Unexpected character")
             }
         }
+    }
+
+    private fun scanOptionalAssignment(term: TokenType, assignment: TokenType) {
+        if (match('=')) addToken(assignment)
+        else addToken(term)
     }
 
     private fun scanNewline() {
@@ -98,6 +103,8 @@ class Scanner(private val source: String) {
     private fun scanMinus() {
         val tokenType = if (match('>')) {
             ARROW
+        } else if (match('=')) {
+            MINUS_EQ
         } else {
             MINUS
         }
@@ -108,6 +115,8 @@ class Scanner(private val source: String) {
     private fun scanSlash() {
         if (match('/')) {
             while (peek() != '\n' && !isAtEnd()) advance()
+        } else if (match('=')) {
+            addToken(SLASH_EQ)
         } else {
             addToken(SLASH)
         }
@@ -117,7 +126,8 @@ class Scanner(private val source: String) {
         val tokenType = if (match('=')) {
             LESS_EQ
         } else if (match('<')) {
-            LESS_LESS
+            if (match('=')) LESS_LESS_EQ
+            else LESS_LESS
         } else {
             LESS
         }
@@ -129,7 +139,8 @@ class Scanner(private val source: String) {
         val tokenType = if (match('=')) {
             GREATER_EQ
         } else if (match('>')) {
-            GREATER_GREATER
+            if (match('=')) GREATER_GREATER_EQ
+            else GREATER_GREATER
         } else {
             GREATER
         }
@@ -180,10 +191,6 @@ class Scanner(private val source: String) {
         if (inInterpolation) return string()
         return addToken(RIGHT_BRACE)
 
-    }
-
-    private fun isTemplateStart(): Boolean {
-        return peek() == '#' && peekNext() == '{'
     }
 
     private fun number() {

@@ -137,9 +137,56 @@ class Parser(private val tokens: List<Token>) {
             }
 
             error(equals, "Invalid assignment target")
+        } else if (match(PLUS_EQ)) {
+            val assignment = compoundAssignment(expr, PLUS, "+")
+            if (assignment != null) return assignment
+        } else if (match(MINUS_EQ)) {
+            val assignment = compoundAssignment(expr, MINUS, "+")
+            if (assignment != null) return assignment
+        } else if (match(STAR_EQ)) {
+            val assignment = compoundAssignment(expr, STAR, "*")
+            if (assignment != null) return assignment
+        } else if (match(SLASH_EQ)) {
+            val assignment = compoundAssignment(expr, SLASH, "/")
+            if (assignment != null) return assignment
+        } else if (match(PERCENT_EQ)) {
+            val assignment = compoundAssignment(expr, PERCENT, "%")
+            if (assignment != null) return assignment
+        } else if (match(AMPERSAND_EQ)) {
+            val assignment = compoundAssignment(expr, AMPERSAND, "&")
+            if (assignment != null) return assignment
+        } else if (match(PIPE_EQ)) {
+            val assignment = compoundAssignment(expr, PIPE, "|")
+            if (assignment != null) return assignment
+        } else if (match(CARET_EQ)) {
+            val assignment = compoundAssignment(expr, CARET, "^")
+            if (assignment != null) return assignment
+        } else if (match(TILDE_EQ)) {
+            val assignment = compoundAssignment(expr, TILDE, "~")
+            if (assignment != null) return assignment
+        } else if (match(LESS_LESS_EQ)) {
+            val assignment = compoundAssignment(expr, LESS_LESS, "<<")
+            if (assignment != null) return assignment
+        } else if (match(GREATER_GREATER_EQ)) {
+            val assignment = compoundAssignment(expr, GREATER_GREATER, ">>")
+            if (assignment != null) return assignment
         }
 
         return expr
+    }
+
+    private fun compoundAssignment(expr: Expr, desugaredType: TokenType, lexeme: String): Expr.Assign? {
+        val op = previous()
+        val value = range()
+
+        if (expr is Expr.Variable) {
+            val token = Token(desugaredType, lexeme, null, op.line)
+            val right = Expr.Binary(expr, token, value)
+            return Expr.Assign(expr.name, right)
+        }
+
+        error(op, "Invalid assignment target")
+        return null
     }
 
     private fun range(): Expr {

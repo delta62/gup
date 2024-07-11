@@ -1,0 +1,3 @@
+let x = 37
+x -= 5
+assertEqual(x, 32)

@@ -2,7 +2,8 @@ enum class TokenType {
     LEFT_PAREN, RIGHT_PAREN,
     LEFT_BRACE, RIGHT_BRACE,
     DOT, DOT_DOT, DOT_DOT_EQ,
-    COMMA, COLON, ARROW, LET, END,
+    DOLLAR, ARROW, LET, END,
+    COMMA, COLON,
 
     // Operators
     // Mathematical
@@ -11,7 +12,9 @@ enum class TokenType {
     // Bit shifts
     LESS_LESS, GREATER_GREATER,
     // Assignment
-    EQ,
+    EQ, PLUS_EQ, MINUS_EQ, STAR_EQ, SLASH_EQ, PERCENT_EQ,
+    AMPERSAND_EQ, PIPE_EQ, CARET_EQ, TILDE_EQ, LESS_LESS_EQ,
+    GREATER_GREATER_EQ,
     // Comparison
     IS, ISNT, NOT, AND, OR,
     GREATER, GREATER_EQ,
