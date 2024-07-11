@@ -109,21 +109,35 @@ class Interpreter : Expr.Visitor<Any> {
 
     override fun visitCallExpr(expr: Expr.Call): Any {
         val callee = evaluate(expr.callee)
-        val arguments = ArrayList<Any>()
+        val args = ArrayList<Any>()
 
         for (argument in expr.arguments) {
-            arguments.add(evaluate(argument))
+            args.add(evaluate(argument))
         }
 
         if (callee !is Callable) {
             throw RuntimeError(expr.paren, "Can only call functions")
         }
 
-        if (arguments.size != callee.arity()) {
-            throw RuntimeError(expr.paren, "Expected ${callee.arity()} arguments but got ${arguments.size}")
+        if (args.size == callee.arity()) {
+            return callee.call(this, args)
+        } else if (args.size > callee.arity()) {
+            throw RuntimeError(expr.paren, "Expected at most ${callee.arity()} arguments but got ${args.size}")
         }
 
-        return callee.call(this, arguments)
+        // Partial application case
+        return object : Callable {
+            override fun arity(): Int {
+                return callee.arity() - args.size
+            }
+
+            override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
+                val appliedArgs = ArrayList<Any>(args)
+                appliedArgs.addAll(arguments)
+                return callee.call(interpreter, appliedArgs)
+            }
+        }
+
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Any {

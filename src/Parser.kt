@@ -18,7 +18,6 @@ class Parser(private val tokens: List<Token>) {
 
     private fun declaration(): Expr? {
         try {
-            // TODO only allow import, struct, enum, function, type class, const `let`
             return expression()
         } catch (error: ParseError) {
             synchronize()
@@ -107,6 +106,10 @@ class Parser(private val tokens: List<Token>) {
         var initializer: Expr? = null
         if (match(EQ)) initializer = expression()
 
+        if (initializer is Expr.Function && initializer.name != null) {
+            throw error(initializer.name as Token, "Assigned functions cannot have names")
+        }
+
         return Expr.Let(name, initializer)
     }
 
@@ -133,6 +136,10 @@ class Parser(private val tokens: List<Token>) {
             val value = composeLow()
 
             if (expr is Expr.Variable) {
+                if (value is Expr.Function && value.name != null) {
+                    throw error(value.name, "Assigned functions cannot have names")
+                }
+
                 return Expr.Assign(expr.name, value)
             }
 

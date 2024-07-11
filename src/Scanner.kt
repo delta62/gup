@@ -159,14 +159,25 @@ class Scanner(private val source: String) {
         inInterpolation = false
 
         while (true) {
+            if (isAtEnd()) {
+                Gup.error(line, "Unterminated string")
+                return
+            }
+
             if (peek() == '"') {
                 advance()
                 break
             }
 
-            if (isAtEnd()) {
-                Gup.error(line, "Unterminated string")
-                return
+            if (peek() == '\\') {
+                advance()
+                when (peek()) {
+                    'n' -> TODO()
+                    'r' -> TODO()
+                    't' -> TODO()
+                    '\\' -> TODO()
+                    else -> throw ScanError()
+                }
             }
 
             if (peek() == '#' && peekNext() == '{') {
