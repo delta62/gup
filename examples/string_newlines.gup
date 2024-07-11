@@ -1,0 +1,9 @@
+let myString = "this
+is
+a
+string"
+
+assertEqual(myString, "this
+is
+a
+string")
