@@ -126,11 +126,11 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun assignment(): Expr {
-        val expr = range()
+        val expr = composeLow()
 
         if (match(EQ)) {
             val equals = previous()
-            val value = range()
+            val value = composeLow()
 
             if (expr is Expr.Variable) {
                 return Expr.Assign(expr.name, value)
@@ -177,7 +177,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun compoundAssignment(expr: Expr, desugaredType: TokenType, lexeme: String): Expr.Assign? {
         val op = previous()
-        val value = range()
+        val value = composeLow()
 
         if (expr is Expr.Variable) {
             val token = Token(desugaredType, lexeme, null, op.line)
@@ -187,6 +187,18 @@ class Parser(private val tokens: List<Token>) {
 
         error(op, "Invalid assignment target")
         return null
+    }
+
+    private fun composeLow(): Expr {
+        var expr = range()
+
+        while (match(DOLLAR)) {
+            val operator = previous()
+            val right = range()
+            expr = Expr.Binary(expr, operator, right)
+        }
+
+        return expr
     }
 
     private fun range(): Expr {

@@ -58,7 +58,7 @@ class Interpreter : Expr.Visitor<Any> {
             SLASH -> numOperation(expr) { l, r -> l / r }
             STAR -> numOperation(expr) { l, r -> l * r }
 
-            DOT -> {
+            DOT, DOLLAR -> {
                 val lName = (expr.left as Expr.Variable).name
                 val rName = (expr.right as Expr.Variable).name
 

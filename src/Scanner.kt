@@ -51,6 +51,7 @@ class Scanner(private val source: String) {
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
             '=' -> addToken(EQ)
+            '$' -> addToken(DOLLAR)
             '~' -> scanOptionalAssignment(TILDE, TILDE_EQ)
             '^' -> scanOptionalAssignment(CARET, CARET_EQ)
             '+' -> scanOptionalAssignment(PLUS, PLUS_EQ)
