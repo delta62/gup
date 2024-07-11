@@ -155,13 +155,13 @@ class Scanner(private val source: String) {
             return
         }
 
+        val builder = StringBuilder()
         val wasInInterpolation = inInterpolation
         inInterpolation = false
 
         while (true) {
             if (isAtEnd()) {
-                Gup.error(line, "Unterminated string")
-                return
+                return Gup.error(line, "Unterminated string")
             }
 
             if (peek() == '"') {
@@ -169,34 +169,31 @@ class Scanner(private val source: String) {
                 break
             }
 
-            if (peek() == '\\') {
-                advance()
-                when (peek()) {
-                    'n' -> TODO()
-                    'r' -> TODO()
-                    't' -> TODO()
-                    '\\' -> TODO()
-                    else -> throw ScanError()
-                }
+            if (match('\\')) {
+                if (match('n')) builder.append('\n')
+                else if (match('r')) builder.append('\r')
+                else if (match('t')) builder.append('\t')
+                else if (match('\\')) builder.append('\\')
+                else if (match('"')) builder.append('"')
+                else return Gup.error(line, "Unknown escape sequence")
+                continue
             }
 
             if (peek() == '#' && peekNext() == '{') {
                 inInterpolation = true
-                val value = source.substring(start + 1..<current)
                 advance()
                 advance()
 
                 val tokenType = if (wasInInterpolation) STRING_MIDDLE else STRING_HEAD
-                return addToken(tokenType, value)
+                return addToken(tokenType, builder.toString())
             }
 
             if (peek() == '\n') line++
-            advance()
+            builder.append(advance())
         }
 
-        val value = source.substring(start + 1..<current - 1)
         val tokenType = if (wasInInterpolation) STRING_END else STRING
-        addToken(tokenType, value)
+        addToken(tokenType, builder.toString())
     }
 
     private fun scanRightBrace() {

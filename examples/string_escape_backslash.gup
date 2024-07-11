@@ -1,0 +1,2 @@
+let str = "The \\ character is called \"backslash\"."
+assertEqual(str, "The \\ character is called \"backslash\".")

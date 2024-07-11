@@ -1,0 +1,2 @@
+let str = "tab\tchar"
+assertEqual(str, "tab	char")

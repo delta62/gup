@@ -1,0 +1,2 @@
+let str = "new\rline"
+assertEqual(str, "newline")

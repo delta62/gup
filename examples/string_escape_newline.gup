@@ -1,0 +1,3 @@
+let str = "new\nline"
+assertEqual(str, "new
+line")

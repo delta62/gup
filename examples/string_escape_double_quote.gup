@@ -1,0 +1,2 @@
+let str = "programming is \"cool\""
+assertEqual(str, "programming is \"cool\"")
