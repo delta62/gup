@@ -105,10 +105,8 @@ class Parser(private val tokens: List<Token>) {
 
     private fun letExpression(): Expr {
         val identifier = consume(IDENTIFIER, "Expected a variable name")
-
         val type = if (match(COLON)) consume(IDENTIFIER, "Expected a type") else null
         val name = TypedIdentifier(identifier, type)
-
         val initializer = if (match(EQ)) expression() else null
 
         if (initializer is Expr.Function && initializer.name != null) {
