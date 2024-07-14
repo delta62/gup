@@ -239,46 +239,48 @@ class Scanner(private val source: String) {
 
         while (peek().isDigit() || peek() == '_') advance()
 
-
-        val num = if (radix != 10) {
-            source
+        if (radix != 10) {
+            val num = source
                 .substring(start..<current)
                 .replace("_", "")
                 .toLong(radix).toDouble()
-        } else {
-            // Base 10 can have decimal points
-            if (peek() == '.' && peekNext().isDigit()) {
-                advance()
-                while (peek().isDigit() || peek() == '_') advance()
-            }
+            return addToken(INT, num)
+        }
 
-            var x = source
+        var isDecimal = false
+
+        // Base 10 can have decimal points
+        if (peek() == '.' && peekNext().isDigit()) {
+            isDecimal = true
+            advance()
+            while (peek().isDigit() || peek() == '_') advance()
+        }
+
+        var coefficient = source
+            .substring(start..<current)
+            .replace("_", "")
+            .toDouble()
+
+        // 1.23e-4
+        if (peek() == 'e' && (peekNext() == '-' || peekNext().isDigit())) {
+            advance()
+            val multiplier = if (match('-')) -1 else 1
+            start = current
+
+            while (peek().isDigit() || peek() == '_') advance()
+            val exponent = source
                 .substring(start..<current)
                 .replace("_", "")
                 .toDouble()
 
-            // 1.23e-4
-            if (peek() == 'e' && (peekNext() == '-' || peekNext().isDigit())) {
-                advance()
-                val multiplier = if (peek() == '-') {
-                    advance()
-                    -1
-                } else 1
-
-                start = current
-                while (peek().isDigit() || peek() == '_') advance()
-                val exponent = source
-                    .substring(start..<current)
-                    .replace("_", "")
-                    .toDouble()
-
-                x *= 10.0.pow(exponent * multiplier)
-            }
-
-            x
+            coefficient *= 10.0.pow(exponent * multiplier)
         }
 
-        addToken(NUMBER, num)
+        if (isDecimal) {
+            addToken(DOUBLE, coefficient)
+        } else {
+            addToken(INT, coefficient.toLong())
+        }
     }
 
     private fun identifier() {

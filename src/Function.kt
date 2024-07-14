@@ -9,7 +9,7 @@ class Function(private val declaration: Expr.Function, private val closure: Envi
         val env = Environment(closure)
 
         for (i in 0..<declaration.params.size) {
-            env.define(declaration.params[i].lexeme, arguments[i])
+            env.define(declaration.params[i].identifier.lexeme, arguments[i])
         }
 
         return try {

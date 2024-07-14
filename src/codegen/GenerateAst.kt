@@ -18,10 +18,10 @@ fun main(args: Array<String>) {
         "Break    : val token: Token",
         "Call     : val callee: Expr, val paren: Token, val arguments: List<Expr>",
         "Continue : val token: Token",
-        "Function : val name: Token?, val params: List<Token>, val body: List<Expr>",
+        "Function : val name: Token?, val params: List<TypedIdentifier>, val body: List<Expr>, val returnType: Token?",
         "Grouping : val expression: Expr",
         "If       : val condition: Expr, val thenBranch: Block, val elseBranch: Block?",
-        "Let      : val name: Token, val initializer: Expr?",
+        "Let      : val name: TypedIdentifier, val initializer: Expr?",
         "Literal  : val value: Any",
         "Logical  : val left: Expr, val operator: Token, val right: Expr",
         "Loop     : val condition: Expr, val body: Block",
@@ -43,7 +43,9 @@ private fun defineAst(outputDir: String, types: List<String>) {
     writer.println("package generated")
     writer.println()
     writer.println("import TemplateString")
+    writer.println("import TypedIdentifier")
     writer.println("import Token")
+    writer.println()
 
     writer.println("sealed class Expr {")
 

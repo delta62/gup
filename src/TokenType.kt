@@ -23,7 +23,8 @@ enum class TokenType {
     PIPE, AMPERSAND, TILDE, CARET,
 
     // Literals
-    IDENTIFIER, NUMBER, TRUE, FALSE,
+    IDENTIFIER, TRUE, FALSE,
+    DOUBLE, INT, UINT,
     STRING, STRING_HEAD, STRING_MIDDLE, STRING_END,
 
     // Functions

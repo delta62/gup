@@ -17,6 +17,7 @@ class Interpreter : Expr.Visitor<Any> {
         globals.define("epoch", Epoch())
         globals.define("next", Next())
         globals.define("println", PrintLine())
+        globals.define("typeof", TypeOf())
     }
 
     fun interpret(statements: List<Expr>) {
@@ -41,22 +42,25 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Any {
+        val left = evaluate(expr.left)
+        val right = evaluate(expr.right)
+
         return when (expr.operator.type) {
-            AMPERSAND -> intOperation(expr) { l, r -> l.and(r).toDouble() }
-            CARET -> intOperation(expr) { l, r -> l.xor(r).toDouble() }
-            GREATER -> numOperation(expr) { l, r -> l > r }
-            GREATER_EQ -> numOperation(expr) { l, r -> l >= r }
-            GREATER_GREATER -> intOperation(expr) { l, r -> l.shr(r).toDouble() }
+            AMPERSAND -> Math.bitwiseAnd(left, right)
+            CARET -> Math.bitwiseXor(left, right)
+            GREATER -> Math.greater(left, right)
+            GREATER_EQ -> Math.greaterEq(left, right)
+            GREATER_GREATER -> Math.shr(left, right)
             IS -> evaluate(expr.left) == evaluate(expr.right)
             ISNT -> evaluate(expr.left) != evaluate(expr.right)
-            LESS -> numOperation(expr) { l, r -> l < r }
-            LESS_EQ -> numOperation(expr) { l, r -> l <= r }
-            LESS_LESS -> intOperation(expr) { l, r -> l.shl(r).toDouble() }
-            MINUS -> numOperation(expr) { l, r -> l - r }
-            PERCENT -> numOperation(expr) { l, r -> l % r }
-            PIPE -> intOperation(expr) { l, r -> l.or(r).toDouble() }
-            SLASH -> numOperation(expr) { l, r -> l / r }
-            STAR -> numOperation(expr) { l, r -> l * r }
+            LESS -> Math.less(left, right)
+            LESS_EQ -> Math.lessEq(left, right)
+            LESS_LESS -> Math.shl(left, right)
+            MINUS -> Math.sub(left, right)
+            PERCENT -> Math.rem(left, right)
+            PIPE -> Math.bitwiseOr(left, right)
+            SLASH -> Math.div(left, right)
+            STAR -> Math.mul(left, right)
 
             DOT, DOLLAR -> {
                 val lName = (expr.left as Expr.Variable).name
@@ -77,18 +81,26 @@ class Interpreter : Expr.Visitor<Any> {
                 }
             }
 
-            DOT_DOT, DOT_DOT_EQ -> intOperation(expr) { min, max ->
-                val rangeMax = if (expr.operator.type == DOT_DOT) max else max + 1
-                val range = Range(min, rangeMax)
-                environment.defineExpr(expr, range)
-                range
+            DOT_DOT, DOT_DOT_EQ -> {
+                if (left is Long && right is Long) {
+                    val rangeMax = if (expr.operator.type == DOT_DOT) left else left + 1
+                    val range = IntRange(left, rangeMax)
+                    environment.defineExpr(expr, range)
+                    range
+                } else if (left is ULong && right is ULong) {
+                    val rangeMax = if (expr.operator.type == DOT_DOT) left else left + 1u
+                    val range = UIntRange(left, rangeMax)
+                    environment.defineExpr(expr, range)
+                    range
+                } else {
+                    throw Unreachable()
+                }
             }
 
             PLUS -> {
-                val left = evaluate(expr.left)
-                val right = evaluate(expr.right)
-
                 if (left is Double && right is Double) left + right
+                else if (left is Long && right is Long) left + right
+                else if (left is ULong && right is ULong) left + right
                 else if (left is String && right is String) left + right
                 else throw Unreachable()
             }
@@ -171,7 +183,7 @@ class Interpreter : Expr.Visitor<Any> {
             value = evaluate(expr.initializer)
         }
 
-        environment.define(expr.name.lexeme, value)
+        environment.define(expr.name.identifier.lexeme, value)
 
         return GUnit()
     }
@@ -215,9 +227,9 @@ class Interpreter : Expr.Visitor<Any> {
 
         return when (expr.operator.type) {
             NOT -> !TypeCheck.checkBooleanOperand(expr.operator, right)
-            MINUS -> -TypeCheck.checkNumberOperand(expr.operator, right)
+            MINUS -> Math.negate(right)
             PLUS -> TypeCheck.checkNumberOperand(expr.operator, right)
-            TILDE -> TypeCheck.checkIntegerOperand(expr.operator, right).inv().toDouble()
+            TILDE -> TypeCheck.checkIntegerOperand(expr.operator, right).inv()
             else -> throw Unreachable()
         }
     }
@@ -254,45 +266,23 @@ class Interpreter : Expr.Visitor<Any> {
         return value ?: throw RuntimeError(name, "Undefined variable")
     }
 
-    private fun intOperation(expr: Expr.Binary, c: (left: Int, right: Int) -> Any): Any {
-        val left = evaluate(expr.left)
-        val right = evaluate(expr.right)
-        val (l, r) = TypeCheck.checkNumberOperands(expr.operator, left, right)
-        if (l % 1 != 0.0 && r % 1 != 0.0) throw RuntimeError(expr.operator, "Operands must be integers")
-
-        return c(l.toInt(), r.toInt())
-    }
-
-    private fun numOperation(expr: Expr.Binary, c: (left: Double, right: Double) -> Any): Any {
-        val left = evaluate(expr.left)
-        val right = evaluate(expr.right)
-        val (l, r) = TypeCheck.checkNumberOperands(expr.operator, left, right)
-        return c(l, r)
-    }
-
     private fun evaluate(expr: Expr): Any {
         return environment.recallExpr(expr) ?: expr.accept(this)
     }
 
     internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {
-        return withEnvironment(environment) {
+        val previous = environment
+        this.environment = environment
+
+        try {
             var ret: Any? = null
             for (expression in block.expressions) {
                 ret = evaluate(expression)
             }
 
-            return@withEnvironment ret ?: GUnit()
-        }
-    }
-
-    private fun <R> withEnvironment(env: Environment, action: () -> R): R {
-        val previous = environment
-        this.environment = env
-
-        try {
-            return action()
+            return ret ?: GUnit()
         } finally {
-            environment = previous
+            this.environment = previous
         }
     }
 

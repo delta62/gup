@@ -5,17 +5,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Stream
+import kotlin.io.path.isDirectory
 import kotlin.io.path.name
 
-class ExampleTest {
-    private val examplePath = "examples"
+class InterpreterTest {
+    private val examplePath = Paths.get("examples", "interpreter")
     private val runner = FileRunner(examplePath)
 
     @TestFactory
     @DisplayName("Code examples")
     fun exampleTests(): Stream<DynamicTest> {
-        val path = Paths.get(examplePath)
-        val files = Files.list(path)
+        val files = Files.list(examplePath)
         return files.map { p -> makeTest(p) }
     }
 

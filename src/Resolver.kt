@@ -6,11 +6,6 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     private var currentFunction = FunctionType.None
     private val scopes = Stack<HashMap<String, Boolean>>()
 
-    enum class FunctionType {
-        None,
-        Function,
-    }
-
     override fun visitAssignExpr(expr: Expr.Assign) {
         resolve(expr.value)
         resolveLocal(expr, expr.name)
@@ -41,8 +36,8 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
 
         beginScope()
         for (param in expr.params) {
-            declare(param)
-            define(param)
+            declare(param.identifier)
+            define(param.identifier)
         }
         resolve(expr.body)
         endScope()
@@ -61,12 +56,12 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
     }
 
     override fun visitLetExpr(expr: Expr.Let) {
-        declare(expr.name)
+        declare(expr.name.identifier)
         if (expr.initializer != null) {
             resolve(expr.initializer)
         }
 
-        define(expr.name)
+        define(expr.name.identifier)
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal) {}

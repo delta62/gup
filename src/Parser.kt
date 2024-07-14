@@ -48,12 +48,14 @@ class Parser(private val tokens: List<Token>) {
 
     private fun forExpression(): Expr {
         val name = consume(IDENTIFIER, "Expected local binding in for expression")
+        val localBinding = TypedIdentifier(name, null)
+
         val inToken = consume(IN, "Expected 'in' in for expression")
         val iterable = expression()
         skipWhitespace()
         var body = if (match(ARROW)) blockOf(expression()) else block(END)
 
-        val initializer = Expr.Let(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
+        val initializer = Expr.Let(localBinding, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
         val increment = Expr.Assign(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
         val condition = Expr.Binary(Expr.Variable(name), Token(ISNT, "isnt", null, name.line), Expr.Literal(GUnit()))
 
@@ -102,12 +104,15 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun letExpression(): Expr {
-        val name = consume(IDENTIFIER, "Expected a variable name")
-        var initializer: Expr? = null
-        if (match(EQ)) initializer = expression()
+        val identifier = consume(IDENTIFIER, "Expected a variable name")
+
+        val type = if (match(COLON)) consume(IDENTIFIER, "Expected a type") else null
+        val name = TypedIdentifier(identifier, type)
+
+        val initializer = if (match(EQ)) expression() else null
 
         if (initializer is Expr.Function && initializer.name != null) {
-            throw error(initializer.name as Token, "Assigned functions cannot have names")
+            throw error(initializer.name, "Assigned functions cannot have names")
         }
 
         return Expr.Let(name, initializer)
@@ -394,14 +399,9 @@ class Parser(private val tokens: List<Token>) {
     private fun primary(): Expr {
         if (match(FALSE)) return Expr.Literal(false)
         if (match(TRUE)) return Expr.Literal(true)
-
-        if (match(FN)) {
-            return functionDefinition()
-        }
-
-        if (match(NUMBER, STRING)) {
-            return Expr.Literal(previous().literal!!)
-        }
+        if (match(FN)) return functionDefinition()
+        if (match(INT, UINT, DOUBLE, STRING)) return Expr.Literal(previous().literal!!)
+        if (match(IDENTIFIER)) return Expr.Variable(previous())
 
         if (match(STRING_HEAD)) {
             val parts = ArrayList<TemplateString>()
@@ -423,10 +423,6 @@ class Parser(private val tokens: List<Token>) {
             return Expr.Template(parts)
         }
 
-        if (match(IDENTIFIER)) {
-            return Expr.Variable(previous())
-        }
-
         if (match(LEFT_PAREN)) {
             val expr = expression()
             consume(RIGHT_PAREN, "Expected ')' after expression")
@@ -437,13 +433,8 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun functionDefinition(): Expr {
-        val params = ArrayList<Token>()
-
-        val name = if (check(IDENTIFIER)) {
-            advance()
-        } else {
-            null
-        }
+        val params = ArrayList<TypedIdentifier>()
+        val functionName = if (check(IDENTIFIER)) advance() else null
 
         consume(LEFT_PAREN, "Expected '(' after function name")
         if (!check(RIGHT_PAREN)) {
@@ -452,11 +443,18 @@ class Parser(private val tokens: List<Token>) {
                     error(peek(), "Can't have more than 255 parameters")
                 }
 
-                params.add(consume(IDENTIFIER, "Expected parameter name"))
+                val name = consume(IDENTIFIER, "Expected parameter name")
+                consume(COLON, "Expected ':' after parameter name")
+                val type = consume(IDENTIFIER, "Expected type name after ':'")
+
+                params.add(TypedIdentifier(name, type))
             } while (match(COMMA))
         }
 
         consume(RIGHT_PAREN, "Expected '|' after parameters")
+
+        consume(COLON, "Expected ':' after function parameters")
+        val returnType = consume(IDENTIFIER, "Expected return type after ':'")
 
         val body = if (match(ARROW)) {
             val expr = expression()
@@ -472,7 +470,7 @@ class Parser(private val tokens: List<Token>) {
             expressions
         }
 
-        return Expr.Function(name, params, body)
+        return Expr.Function(functionName, params, body, returnType)
     }
 
     private fun match(vararg types: TokenType): Boolean {

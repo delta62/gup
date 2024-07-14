@@ -3,8 +3,18 @@ package std
 import Callable
 import Interpreter
 import GUnit
+import types.Type
+import types.TypeSource
 
 class AssertEqual : Callable {
+    companion object {
+        fun type(): Type {
+            val returnType = Type.Unit(TypeSource.Hardcoded)
+            val params = listOf(Type.Any(TypeSource.Hardcoded), Type.Any(TypeSource.Hardcoded))
+            return Type.Function(TypeSource.Hardcoded, params, returnType)
+        }
+    }
+
     override fun arity(): Int {
         return 2
     }

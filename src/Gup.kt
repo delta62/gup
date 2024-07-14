@@ -46,17 +46,22 @@ class Gup {
             val scanner = Scanner(source)
             val tokens = scanner.scan()
             val parser = Parser(tokens)
-            val statements = parser.parse()
+            val expressions = parser.parse()
             val interpreter = Interpreter()
 
             if (hadError) return
 
             val resolver = Resolver(interpreter)
-            resolver.resolve(statements)
+            resolver.resolve(expressions)
 
             if (hadError) return
 
-            interpreter.interpret(statements)
+            val typeChecker = TypeChecker()
+            typeChecker.typeCheck(expressions)
+
+            if (hadError) return
+
+            interpreter.interpret(expressions)
         }
 
         private fun report(line: Int, where: String, message: String) {

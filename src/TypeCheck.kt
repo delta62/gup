@@ -2,10 +2,8 @@ import error.RuntimeError
 
 class TypeCheck {
     companion object {
-        fun checkIntegerOperand(operator: Token, right: Any): Int {
-            val r = checkNumberOperand(operator, right)
-            if (r % 1 == 0.0) return r.toInt()
-            throw RuntimeError(operator, "Operand must be an integer")
+        fun checkIntegerOperand(operator: Token, right: Any): Long {
+            return checkNumberOperand<Long>(operator, right)
         }
 
         fun checkBooleanOperand(operator: Token, operand: Any): Boolean {
@@ -13,13 +11,13 @@ class TypeCheck {
             throw RuntimeError(operator, "Operand must be a boolean")
         }
 
-        fun checkNumberOperand(operator: Token, operand: Any): Double {
-            if (operand is Double) return operand
+        inline fun <reified T: Number> checkNumberOperand(operator: Token, operand: Any): T {
+            if (operand is T) return operand
             throw RuntimeError(operator, "Operand must be a number")
         }
 
-        fun checkNumberOperands(operator: Token, left: Any, right: Any): Pair<Double, Double> {
-            if (left is Double && right is Double) return Pair(left, right)
+        inline fun <reified T: Number> checkNumberOperands(operator: Token, left: Any, right: Any): Pair<T, T> {
+            if (left is T && right is T) return Pair(left, right)
             throw RuntimeError(operator, "Operands must be numbers")
         }
     }

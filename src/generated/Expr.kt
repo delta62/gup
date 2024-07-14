@@ -2,6 +2,8 @@ package generated
 
 import TemplateString
 import Token
+import TypedIdentifier
+
 sealed class Expr {
     interface Visitor<R> {
         fun visitAssignExpr(expr: Assign): R
@@ -59,7 +61,7 @@ sealed class Expr {
         }
     }
 
-    data class Function(val name: Token?, val params: List<Token>, val body: List<Expr>) : Expr() {
+    data class Function(val name: Token?, val params: List<TypedIdentifier>, val body: List<Expr>, val returnType: Token?) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitFunctionExpr(this)
         }
@@ -77,7 +79,7 @@ sealed class Expr {
         }
     }
 
-    data class Let(val name: Token, val initializer: Expr?) : Expr() {
+    data class Let(val name: TypedIdentifier, val initializer: Expr?) : Expr() {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitLetExpr(this)
         }
