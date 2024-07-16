@@ -38,6 +38,10 @@ sealed class Type(val source: TypeSource) {
         override fun toString(): kotlin.String = "unit"
     }
 
+    class Unspecified : Type(TypeSource.InferredWeak) {
+        override fun toString(): kotlin.String = "unspecified"
+    }
+
     fun compatibleWith(other: Type): Boolean {
         // Any is compatible with anything by definition
         if (this is Any || other is Any) return true
@@ -89,7 +93,7 @@ sealed class Type(val source: TypeSource) {
     }
 
     companion object {
-        fun byName(name: kotlin.String): Type? {
+        fun byName(name: kotlin.String): Type {
             return when (name) {
                 "int" -> Long(TypeSource.Hardcoded)
                 "uint" -> ULong(TypeSource.Hardcoded)
@@ -97,7 +101,7 @@ sealed class Type(val source: TypeSource) {
                 "bool" -> Bool(TypeSource.Hardcoded)
                 "double" -> Double(TypeSource.Hardcoded)
                 "string" -> String(TypeSource.Hardcoded)
-                else -> null
+                else -> throw TypeError("Unknown type '$name'")
             }
         }
     }

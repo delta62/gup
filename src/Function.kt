@@ -21,6 +21,6 @@ class Function(private val declaration: Expr.Function, private val closure: Envi
     }
 
     override fun toString(): String {
-        return "<function ${declaration.name}>"
+        return "<fn ${declaration.name}(...${arity()} args)>"
     }
 }

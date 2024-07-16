@@ -19,6 +19,8 @@ class InterpreterTest {
     }
 
     private fun makeTest(path: Path): DynamicTest {
-        return DynamicTest.dynamicTest(path.name) { runner.runExample(path.fileName.toString()) }
+        return DynamicTest.dynamicTest(path.name) {
+            runner.runExample(path.fileName.toString())
+        }
     }
 }

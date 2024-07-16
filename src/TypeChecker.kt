@@ -88,7 +88,13 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Type {
-        TODO("Not yet implemented")
+        val returnType = if (expr.returnType != null) Type.byName(expr.returnType.lexeme) else Type.Unspecified()
+        val parameters = expr.params.map { p -> if (p.type != null) Type.byName(p.type.lexeme) else Type.Unspecified() }
+        val type = Type.Function(TypeSource.Hardcoded, parameters, returnType)
+
+        if (expr.name != null) env[expr.name] = type
+
+        return type
     }
 
     override fun visitGroupingExpr(expr: Expr.Grouping): Type {
@@ -183,7 +189,7 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Type {
-        return env[expr.name] ?: throw TypeError("Type for ${expr.name} not defined")
+        return env[expr.name] ?: throw TypeError("Type for variable '${expr.name}' is not defined")
     }
 
     private inline fun <reified T> expectType(expr: Expr) {

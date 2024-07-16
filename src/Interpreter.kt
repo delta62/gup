@@ -32,11 +32,8 @@ class Interpreter : Expr.Visitor<Any> {
         val value = evaluate(expr.value)
         val distance = locals[expr]
 
-        if (distance != null) {
-            environment.assignAt(distance, expr.name, value)
-        } else {
-            globals.assign(expr.name, value)
-        }
+        if (distance != null) environment.assignAt(distance, expr.name, value)
+        else globals.assign(expr.name, value)
 
         return value
     }
@@ -271,7 +268,7 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {
-        val previous = environment
+        val previous = this.environment
         this.environment = environment
 
         try {

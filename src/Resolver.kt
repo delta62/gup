@@ -57,10 +57,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit> {
 
     override fun visitLetExpr(expr: Expr.Let) {
         declare(expr.name.identifier)
-        if (expr.initializer != null) {
-            resolve(expr.initializer)
-        }
-
+        if (expr.initializer != null) resolve(expr.initializer)
         define(expr.name.identifier)
     }
 
