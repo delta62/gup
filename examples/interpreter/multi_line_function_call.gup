@@ -1,4 +1,4 @@
-fn return42()
+fn return42(): int
     42
 end
 

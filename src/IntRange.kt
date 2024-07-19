@@ -6,7 +6,9 @@ class IntRange(private var min: Long, private val max: Long) : Iterable<Long> {
     }
 
     override fun next(): Long? {
+        val ret = min
         if (min >= max) return null
-        return min++
+        min += 1
+        return ret
     }
 }

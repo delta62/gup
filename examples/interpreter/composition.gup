@@ -1,5 +1,5 @@
-fn add1(x) -> x + 1
-fn times3(x) -> x * 3
+fn add1(x: int): int -> x + 1
+fn times3(x: int): int -> x * 3
 let composed = times3 . add1
 
 // (3 * (1 + 1)) == 6

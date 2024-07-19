@@ -22,6 +22,13 @@ sealed class Type(val source: TypeSource) {
         }
     }
 
+    class Struct(val fields: Map<String, Type>) : Type(TypeSource.Hardcoded) {
+        override fun toString(): kotlin.String {
+            val fieldNames = fields.entries.joinToString(", ") { (k, v) -> "$k: $v" }
+            return "struct<$fieldNames>"
+        }
+    }
+
     class Long(source: TypeSource) : Type(source) {
         override fun toString(): kotlin.String = "int"
     }

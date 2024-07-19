@@ -31,16 +31,16 @@ class Math {
 
         fun shl(x: Any, y: Any): Any {
             return when (x) {
-                is Long -> x.shl(y as Int)
-                is ULong -> x.shl(y as Int)
+                is Long -> x.shl((y as Long).toInt())
+                is ULong -> x.shl((y as Long).toInt())
                 else -> throw Unreachable()
             }
         }
 
         fun shr(x: Any, y: Any): Any {
             return when (x) {
-                is Long -> x.shr(y as Int)
-                is ULong -> x.shr(y as Int)
+                is Long -> x.shr((y as Long).toInt())
+                is ULong -> x.shr((y as Long).toInt())
                 else -> throw Unreachable()
             }
         }

@@ -1,2 +1,2 @@
 let x = 5_.0___0000_
-assertEqual(x, 5)
+assertEqual(x, 5.0)

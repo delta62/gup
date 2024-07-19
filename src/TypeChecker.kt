@@ -2,6 +2,7 @@ import error.TypeError
 import generated.Expr
 import TokenType.*
 import std.AssertEqual
+import std.Next
 import std.TypeOf
 import types.Type
 import types.TypeEnv
@@ -14,6 +15,7 @@ class TypeChecker : Expr.Visitor<Type> {
     init {
         env[Token(IDENTIFIER, "assertEqual", null, 0)] = AssertEqual.type()
         env[Token(IDENTIFIER, "typeof", null, 0)] = TypeOf.type()
+        env[Token(IDENTIFIER, "next", null, 0)] = Next.type()
     }
 
     fun typeCheck(expressions: List<Expr>) {
@@ -36,24 +38,51 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Type {
-        val left = resolve(expr.left)
-        val right = resolve(expr.right)
+        return when (expr.operator.type) {
+            AMPERSAND, CARET, PIPE, MINUS, STAR, SLASH, GREATER_GREATER, LESS_LESS, PERCENT -> {
+                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java)
+                val right = resolve(expr.right)
+                expectCompatible(left, right)
+                left.merge(right)
+            }
 
-        if (!left.compatibleWith(right)) {
-            throw TypeError("Type $left is incompatible with $right")
+            LESS, LESS_EQ, GREATER, GREATER_EQ, IS, ISNT -> {
+                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java, Type.Double::class.java, Type.String::class.java)
+                val right = resolve(expr.right)
+                expectCompatible(left, right)
+                Type.Bool(TypeSource.ByDefinition)
+            }
+
+            PLUS -> {
+                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java, Type.Double::class.java, Type.String::class.java)
+                val right = resolve(expr.right)
+                expectCompatible(left, right)
+                left.merge(right)
+            }
+
+            DOT, DOLLAR -> {
+                val left = resolve(expr.left)
+                val right = resolve(expr.right)
+
+                if (left !is Type.Function || right !is Type.Function) {
+                    throw TypeError("Cannot compose non-function values")
+                }
+
+                val composedParams = ArrayList(left.parameters)
+                composedParams.removeLast()
+                composedParams += right.parameters
+                Type.Function(TypeSource.InferredStrong, composedParams, left.returnType)
+            }
+
+            DOT_DOT, DOT_DOT_EQ -> Type.Struct(emptyMap())
+
+            else -> throw TypeError("Unsupported binary operator '${expr.operator.lexeme}'")
         }
-
-        return left.merge(right)
     }
 
     override fun visitBlockExpr(expr: Expr.Block): Type {
-        var ret: Type = Type.Unit(TypeSource.InferredStrong)
-
-        for (expression in expr.expressions) {
-            ret = resolve(expression)
-        }
-
-        return ret
+        val init: Type = Type.Unit(TypeSource.InferredStrong)
+        return expr.expressions.fold(init) { _, x -> resolve(x) }
     }
 
     override fun visitBreakExpr(expr: Expr.Break): Type {
@@ -144,6 +173,7 @@ class TypeChecker : Expr.Visitor<Type> {
             is Long -> Type.Long(TypeSource.Hardcoded)
             is Double -> Type.Double(TypeSource.Hardcoded)
             is Boolean -> Type.Bool(TypeSource.Hardcoded)
+            is GUnit -> Type.Unit(TypeSource.Hardcoded)
             else -> throw TypeError("Unknown type ${expr.value}")
         }
     }
@@ -194,6 +224,20 @@ class TypeChecker : Expr.Visitor<Type> {
 
     private inline fun <reified T> expectType(expr: Expr) {
         val actualType = resolve(expr)
+        if (actualType is Type.Any) return
         if (actualType !is T) throw TypeError("Expected ${T::class.simpleName} but got type $actualType")
+    }
+
+    private fun expectOneOf(expr: Expr, vararg foo: Class<*>): Type {
+        val resolved = resolve(expr)
+        if (resolved is Type.Any) return resolved
+
+        if (foo.any { klass -> klass == resolved::class.java }) return resolved
+        throw TypeError("Unexpected type $resolved")
+    }
+
+    private fun expectCompatible(a: Type, b: Type) {
+        if (a.compatibleWith(b)) return
+        throw TypeError("Type $a is incompatible with $b")
     }
 }

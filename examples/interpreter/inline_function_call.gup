@@ -1,3 +1,3 @@
-fn return42() -> 42
+fn return42(): int -> 42
 let result = return42()
 assertEqual(result, 42)

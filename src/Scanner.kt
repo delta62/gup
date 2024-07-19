@@ -243,7 +243,7 @@ class Scanner(private val source: String) {
             val num = source
                 .substring(start..<current)
                 .replace("_", "")
-                .toLong(radix).toDouble()
+                .toLong(radix)
             return addToken(INT, num)
         }
 
@@ -276,11 +276,8 @@ class Scanner(private val source: String) {
             coefficient *= 10.0.pow(exponent * multiplier)
         }
 
-        if (isDecimal) {
-            addToken(DOUBLE, coefficient)
-        } else {
-            addToken(INT, coefficient.toLong())
-        }
+        if (isDecimal) addToken(DOUBLE, coefficient)
+        else addToken(INT, coefficient.toLong())
     }
 
     private fun identifier() {

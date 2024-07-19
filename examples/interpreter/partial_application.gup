@@ -1,4 +1,4 @@
-fn add(x, y) -> x + y
+fn add(x: int, y: int): int -> x + y
 let add1 = add(1)
 let result = add1(41)
 assertEqual(result, 42)

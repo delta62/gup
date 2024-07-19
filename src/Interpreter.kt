@@ -80,12 +80,12 @@ class Interpreter : Expr.Visitor<Any> {
 
             DOT_DOT, DOT_DOT_EQ -> {
                 if (left is Long && right is Long) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) left else left + 1
+                    val rangeMax = if (expr.operator.type == DOT_DOT) right else right + 1
                     val range = IntRange(left, rangeMax)
                     environment.defineExpr(expr, range)
                     range
                 } else if (left is ULong && right is ULong) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) left else left + 1u
+                    val rangeMax = if (expr.operator.type == DOT_DOT) right else right + 1u
                     val range = UIntRange(left, rangeMax)
                     environment.defineExpr(expr, range)
                     range
