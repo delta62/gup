@@ -5,7 +5,6 @@ import kotlin.math.pow
 class Scanner(private val source: String) {
     private var start = 0
     private var current = 0
-    private var line = 1
     private var inInterpolation = false
     private val tokens = ArrayList<Token>()
 
@@ -40,7 +39,7 @@ class Scanner(private val source: String) {
             scanToken()
         }
 
-        tokens.add(Token(EOF, "", null, line))
+        tokens.add(Token(EOF, "", null, current))
         return tokens
     }
 
@@ -48,6 +47,8 @@ class Scanner(private val source: String) {
         when (val c = advance()) {
             '(' -> addToken(LEFT_PAREN)
             ')' -> addToken(RIGHT_PAREN)
+            '[' -> addToken(LEFT_BRACKET)
+            ']' -> addToken(RIGHT_BRACKET)
             ',' -> addToken(COMMA)
             ':' -> addToken(COLON)
             '=' -> addToken(EQ)
@@ -67,12 +68,12 @@ class Scanner(private val source: String) {
             '>' -> scanGreater()
             '/' -> scanSlash()
             ' ', '\r', '\t' -> {}
-            '\n' -> scanNewline()
+            '\n' -> addToken(NEWLINE)
             '"' -> string()
             else -> {
                 if (c.isDigit()) number()
                 else if (c.isLetter()) identifier()
-                else Gup.error(line, "Unexpected character")
+                else Gup.error(start, "Unexpected character")
             }
         }
     }
@@ -80,11 +81,6 @@ class Scanner(private val source: String) {
     private fun scanOptionalAssignment(term: TokenType, assignment: TokenType) {
         if (match('=')) addToken(assignment)
         else addToken(term)
-    }
-
-    private fun scanNewline() {
-        line += 1
-        addToken(NEWLINE)
     }
 
     private fun scanDot() {
@@ -151,7 +147,7 @@ class Scanner(private val source: String) {
 
     private fun string() {
         if (inInterpolation && previous() != '}') {
-            Gup.error(line, "Cannot embed string literals inside of string interpolation")
+            Gup.error(current, "Cannot embed string literals inside of string interpolation")
             return
         }
 
@@ -161,7 +157,7 @@ class Scanner(private val source: String) {
 
         while (true) {
             if (isAtEnd()) {
-                return Gup.error(line, "Unterminated string")
+                return Gup.error(current, "Unterminated string")
             }
 
             if (peek() == '"') {
@@ -186,7 +182,7 @@ class Scanner(private val source: String) {
                     builder.appendCodePoint(codePoint)
                     consume('}')
                 }
-                else return Gup.error(line, "Unknown escape sequence")
+                else return Gup.error(current, "Unknown escape sequence")
                 continue
             }
 
@@ -199,7 +195,6 @@ class Scanner(private val source: String) {
                 return addToken(tokenType, builder.toString())
             }
 
-            if (peek() == '\n') line++
             builder.append(advance())
         }
 
@@ -221,7 +216,7 @@ class Scanner(private val source: String) {
                 'b' -> 2
                 else -> {
                     if (c.isDigit()) {
-                        Gup.error(line, "Numbers starting with '0' must be followed with 'x', 'o', or 'b'")
+                        Gup.error(current, "Numbers starting with '0' must be followed with 'x', 'o', or 'b'")
                         throw ScanError()
                     } else {
                         10
@@ -326,6 +321,6 @@ class Scanner(private val source: String) {
 
     private fun addToken(type: TokenType, literal: Any? = null) {
         val text = source.substring(start..<current)
-        tokens.add(Token(type, text, literal, line))
+        tokens.add(Token(type, text, literal, start))
     }
 }

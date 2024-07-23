@@ -1,0 +1,2 @@
+let x = randInt(3, 10)
+assertEqual(typeof(x), "int")

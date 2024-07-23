@@ -1,14 +1,17 @@
 package std
 
 import Callable
-import GUnit
+import types.GupUnit
 import Interpreter
+import types.FunctionType
 import types.Type
 import types.TypeSource
 
 class TypeOf : Callable {
-    companion object {
-        fun type(): Type {
+    companion object : FunctionType {
+        override fun name() = "typeof"
+
+        override fun type(): Type.Function {
             val returnType = Type.String(TypeSource.Hardcoded)
             val params = listOf(Type.Any(TypeSource.Hardcoded))
             return Type.Function(TypeSource.Hardcoded, params, returnType)
@@ -23,7 +26,7 @@ class TypeOf : Callable {
         return when (arguments[0]) {
             is Double -> "double"
             is Callable -> "function"
-            is GUnit -> "unit"
+            is GupUnit -> "unit"
             is Boolean -> "bool"
             is String -> "string"
             is Long -> "int"

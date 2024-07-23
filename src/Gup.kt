@@ -51,11 +51,6 @@ class Gup {
 
             if (hadError) return
 
-            val resolver = Resolver(interpreter)
-            resolver.resolve(expressions)
-
-            if (hadError) return
-
             val typeChecker = TypeChecker()
             typeChecker.typeCheck(expressions)
 
@@ -75,14 +70,14 @@ class Gup {
 
         fun error(token: Token, message: String) {
             if (token.type == TokenType.EOF) {
-                report(token.line, " at end", message)
+                report(token.location, " at end", message)
             } else {
-                report(token.line, "at '${token.lexeme}'", message)
+                report(token.location, "at '${token.lexeme}'", message)
             }
         }
 
         fun runtimeError(error: RuntimeError) {
-            System.err.println("${error.message}\n[line ${error.token.line}]")
+            System.err.println("${error.message}\n[line ${error.token.location}]")
             hadRuntimeError = true
         }
     }

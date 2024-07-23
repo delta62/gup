@@ -1,25 +1,33 @@
 import error.TypeError
 import generated.Expr
 import TokenType.*
-import std.AssertEqual
-import std.Next
-import std.TypeOf
-import types.Type
-import types.TypeEnv
-import types.TypeSource
+import std.*
+import types.*
+import types.FunctionType
+import kotlin.reflect.KClass
 
 class TypeChecker : Expr.Visitor<Type> {
-    private var env = TypeEnv()
+    private var env = StaticScope<String, Type>()
     private var functionReturnType: Type? = null
 
+    private fun builtin(func: FunctionType) {
+        val token = Token(IDENTIFIER, func.name(), null, 0)
+        env[token.lexeme] = func.type()
+    }
+
     init {
-        env[Token(IDENTIFIER, "assertEqual", null, 0)] = AssertEqual.type()
-        env[Token(IDENTIFIER, "typeof", null, 0)] = TypeOf.type()
-        env[Token(IDENTIFIER, "next", null, 0)] = Next.type()
+        builtin(AssertEqual)
+        builtin(Epoch)
+        builtin(Iterate)
+        builtin(Len)
+        builtin(Next)
+        builtin(PrintLine)
+        builtin(RandInt)
+        builtin(TypeOf)
     }
 
     fun typeCheck(expressions: List<Expr>) {
-        for (expr in expressions) resolve(expr)
+        expressions.forEach { expr -> resolve(expr) }
     }
 
     private fun resolve(expression: Expr): Type {
@@ -27,34 +35,28 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitAssignExpr(expr: Expr.Assign): Type {
-        val targetType = env[expr.name] ?: throw TypeError("$expr.name has not been initialized yet")
+        val targetType = env[expr.name.lexeme] ?: throw TypeError("$expr.name has not been initialized yet")
         val valueType = resolve(expr.value)
-
-        if (!targetType.compatibleWith(valueType)) {
-            throw TypeError("Cannot assign value of type $valueType to variable of type $targetType")
-        }
-
         return targetType.merge(valueType)
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Type {
         return when (expr.operator.type) {
             AMPERSAND, CARET, PIPE, MINUS, STAR, SLASH, GREATER_GREATER, LESS_LESS, PERCENT -> {
-                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java)
+                val left = expectOneOf(expr.left, Type.ULong::class, Type.Long::class)
                 val right = resolve(expr.right)
-                expectCompatible(left, right)
                 left.merge(right)
             }
 
             LESS, LESS_EQ, GREATER, GREATER_EQ, IS, ISNT -> {
-                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java, Type.Double::class.java, Type.String::class.java)
+                val left = expectOneOf(expr.left, Type.ULong::class, Type.Long::class, Type.Double::class, Type.String::class)
                 val right = resolve(expr.right)
                 expectCompatible(left, right)
                 Type.Bool(TypeSource.ByDefinition)
             }
 
             PLUS -> {
-                val left = expectOneOf(expr.left, Type.ULong::class.java, Type.Long::class.java, Type.Double::class.java, Type.String::class.java)
+                val left = expectOneOf(expr.left, Type.ULong::class, Type.Long::class, Type.Double::class, Type.String::class)
                 val right = resolve(expr.right)
                 expectCompatible(left, right)
                 left.merge(right)
@@ -68,8 +70,8 @@ class TypeChecker : Expr.Visitor<Type> {
                     throw TypeError("Cannot compose non-function values")
                 }
 
-                val composedParams = ArrayList(left.parameters)
-                composedParams.removeLast()
+                val paramRange = 0..<left.parameters.size - 1
+                val composedParams = left.parameters.slice(paramRange).toMutableList()
                 composedParams += right.parameters
                 Type.Function(TypeSource.InferredStrong, composedParams, left.returnType)
             }
@@ -91,7 +93,7 @@ class TypeChecker : Expr.Visitor<Type> {
 
     override fun visitCallExpr(expr: Expr.Call): Type {
         if (expr.callee !is Expr.Variable) TODO("typing non-identifier functions not implemented yet")
-        val callee = env[expr.callee.name]
+        val callee = env[expr.callee.name.lexeme]
 
         if (callee !is Type.Function) throw TypeError("Can't call '$callee', not a function")
         if (expr.arguments.size > callee.parameters.size) throw TypeError("Too many arguments provided to '$callee'")
@@ -117,11 +119,11 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Type {
-        val returnType = if (expr.returnType != null) Type.byName(expr.returnType.lexeme) else Type.Unspecified()
-        val parameters = expr.params.map { p -> if (p.type != null) Type.byName(p.type.lexeme) else Type.Unspecified() }
+        val returnType = if (expr.returnType != null) Type.parsePrimitive(expr.returnType.lexeme) else Type.Unspecified()
+        val parameters = expr.params.map { p -> if (p.type != null) Type.parsePrimitive(p.type.lexeme) else Type.Unspecified() }
         val type = Type.Function(TypeSource.Hardcoded, parameters, returnType)
 
-        if (expr.name != null) env[expr.name] = type
+        if (expr.name != null) env[expr.name.lexeme] = type
 
         return type
     }
@@ -146,7 +148,7 @@ class TypeChecker : Expr.Visitor<Type> {
 
     override fun visitLetExpr(expr: Expr.Let): Type {
         val actualType = if (expr.initializer != null) resolve(expr.initializer) else null
-        val annotatedType = if (expr.name.type != null) Type.byName(expr.name.type.lexeme) else null
+        val annotatedType = if (expr.name.type != null) Type.parsePrimitive(expr.name.type.lexeme) else null
 
         val type = if (actualType == null && annotatedType == null) {
             // let x
@@ -161,19 +163,29 @@ class TypeChecker : Expr.Visitor<Type> {
             actualType.merge(annotatedType)
         }
 
-        env[expr.name.identifier] = type
+        env[expr.name.identifier.lexeme] = type
 
         return type
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal): Type {
-        return when (expr.value) {
+        return when (val value = expr.value) {
             is String -> Type.String(TypeSource.Hardcoded)
             is ULong -> Type.ULong(TypeSource.Hardcoded)
             is Long -> Type.Long(TypeSource.Hardcoded)
             is Double -> Type.Double(TypeSource.Hardcoded)
             is Boolean -> Type.Bool(TypeSource.Hardcoded)
-            is GUnit -> Type.Unit(TypeSource.Hardcoded)
+            is GupUnit -> Type.Unit(TypeSource.Hardcoded)
+            is GupList -> {
+                val init: Type = Type.Unspecified()
+                val itemType = value.fold(init) { acc, x ->
+                    val resolved = resolve(x)
+                    if (acc == Type.Unspecified()) resolved
+                    else acc.merge(resolved)
+                }
+
+                Type.List(itemType.source, itemType)
+            }
             else -> throw TypeError("Unknown type ${expr.value}")
         }
     }
@@ -219,7 +231,7 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Type {
-        return env[expr.name] ?: throw TypeError("Type for variable '${expr.name}' is not defined")
+        return env[expr.name.lexeme] ?: throw TypeError("Type for variable '${expr.name}' is not defined")
     }
 
     private inline fun <reified T> expectType(expr: Expr) {
@@ -228,11 +240,11 @@ class TypeChecker : Expr.Visitor<Type> {
         if (actualType !is T) throw TypeError("Expected ${T::class.simpleName} but got type $actualType")
     }
 
-    private fun expectOneOf(expr: Expr, vararg foo: Class<*>): Type {
+    private fun expectOneOf(expr: Expr, vararg foo: KClass<*>): Type {
         val resolved = resolve(expr)
         if (resolved is Type.Any) return resolved
 
-        if (foo.any { klass -> klass == resolved::class.java }) return resolved
+        if (foo.any { klass -> klass == resolved::class }) return resolved
         throw TypeError("Unexpected type $resolved")
     }
 

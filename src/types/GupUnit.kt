@@ -1,10 +1,12 @@
-class GUnit {
+package types
+
+class GupUnit {
     override fun toString(): String {
         return "unit"
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is GUnit
+        return other is GupUnit
     }
 
     override fun hashCode(): Int {

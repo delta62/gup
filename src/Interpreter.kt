@@ -5,20 +5,21 @@ import error.RuntimeError
 import error.Unreachable
 import generated.Expr
 import std.*
+import types.GupUnit
 
 class Interpreter : Expr.Visitor<Any> {
-    private val globals = Environment()
-    private var environment = globals
-    private var loopState = LoopState.NoLoop
-    private var locals = HashMap<Expr, Int>()
+    private var env: LexicalScope = LexicalScope.fromEntries(mapOf(
+        AssertEqual.name() to AssertEqual(),
+        Epoch.name() to Epoch(),
+        Iterate.name() to Iterate(),
+        Len.name() to Len(),
+        Next.name() to Next(),
+        PrintLine.name() to PrintLine(),
+        RandInt.name() to RandInt(),
+        TypeOf.name() to TypeOf()
+    ))
 
-    init {
-        globals.define("assertEqual", AssertEqual())
-        globals.define("epoch", Epoch())
-        globals.define("next", Next())
-        globals.define("println", PrintLine())
-        globals.define("typeof", TypeOf())
-    }
+    private var loopState = LoopState.NoLoop
 
     fun interpret(statements: List<Expr>) {
         try {
@@ -30,11 +31,7 @@ class Interpreter : Expr.Visitor<Any> {
 
     override fun visitAssignExpr(expr: Expr.Assign): Any {
         val value = evaluate(expr.value)
-        val distance = locals[expr]
-
-        if (distance != null) environment.assignAt(distance, expr.name, value)
-        else globals.assign(expr.name, value)
-
+        env.assign(expr.name, value)
         return value
     }
 
@@ -63,8 +60,8 @@ class Interpreter : Expr.Visitor<Any> {
                 val lName = (expr.left as Expr.Variable).name
                 val rName = (expr.right as Expr.Variable).name
 
-                val l = environment.get(lName) as Function
-                val r = environment.get(rName) as Function
+                val l = env.get(lName) as Function
+                val r = env.get(rName) as Function
 
                 return object : Callable {
                     override fun arity(): Int {
@@ -80,26 +77,19 @@ class Interpreter : Expr.Visitor<Any> {
 
             DOT_DOT, DOT_DOT_EQ -> {
                 if (left is Long && right is Long) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) right else right + 1
-                    val range = IntRange(left, rangeMax)
-                    environment.defineExpr(expr, range)
-                    range
+                    val rangeMax = if (expr.operator.type == DOT_DOT) right - 1 else right
+                    IntRange(left, rangeMax)
                 } else if (left is ULong && right is ULong) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) right else right + 1u
-                    val range = UIntRange(left, rangeMax)
-                    environment.defineExpr(expr, range)
-                    range
+                    val rangeMax = if (expr.operator.type == DOT_DOT) right - 1u else right
+                    UIntRange(left, rangeMax)
                 } else {
                     throw Unreachable()
                 }
             }
 
             PLUS -> {
-                if (left is Double && right is Double) left + right
-                else if (left is Long && right is Long) left + right
-                else if (left is ULong && right is ULong) left + right
-                else if (left is String && right is String) left + right
-                else throw Unreachable()
+                if (left is String && right is String) left + right
+                else Math.add(left, right)
             }
 
             else -> throw Unreachable()
@@ -150,12 +140,9 @@ class Interpreter : Expr.Visitor<Any> {
     }
 
     override fun visitFunctionExpr(expr: Expr.Function): Any {
-        val function = Function(expr, environment)
-
-        if (expr.name != null) {
-            environment.define(expr.name.lexeme, function)
-        }
-
+        if (expr.name != null) env = env.define(expr.name.lexeme)
+        val function = Function(expr, env)
+        if (expr.name != null) env.assign(expr.name, function)
         return function
     }
 
@@ -165,24 +152,18 @@ class Interpreter : Expr.Visitor<Any> {
 
     override fun visitIfExpr(expr: Expr.If): Any {
         if (evaluate(expr.condition) == true) {
-            evaluateBlock(expr.thenBranch, environment)
+            evaluate(expr.thenBranch)
         } else if (expr.elseBranch != null) {
-            evaluateBlock(expr.elseBranch, environment)
+            evaluate(expr.elseBranch)
         }
 
-        return GUnit()
+        return GupUnit()
     }
 
     override fun visitLetExpr(expr: Expr.Let): Any {
-        var value: Any? = null
-
-        if (expr.initializer != null) {
-            value = evaluate(expr.initializer)
-        }
-
-        environment.define(expr.name.identifier.lexeme, value)
-
-        return GUnit()
+        val value = if (expr.initializer != null)  evaluate(expr.initializer) else null
+        env = env.define(expr.name.identifier.lexeme, value)
+        return GupUnit()
     }
 
     override fun visitLiteralExpr(expr: Expr.Literal): Any {
@@ -223,16 +204,16 @@ class Interpreter : Expr.Visitor<Any> {
         val right = evaluate(expr.right)
 
         return when (expr.operator.type) {
-            NOT -> !TypeCheck.checkBooleanOperand(expr.operator, right)
+            NOT -> !(right as Boolean)
             MINUS -> Math.negate(right)
-            PLUS -> TypeCheck.checkNumberOperand(expr.operator, right)
-            TILDE -> TypeCheck.checkIntegerOperand(expr.operator, right).inv()
+            PLUS -> right
+            TILDE -> (right as Long).inv()
             else -> throw Unreachable()
         }
     }
 
     override fun visitVariableExpr(expr: Expr.Variable): Any {
-        return lookUpVariable(expr.name, expr)
+        return env.get(expr.name) ?: throw RuntimeError(expr.name, "Undefined variable")
     }
 
     override fun visitLoopExpr(expr: Expr.Loop): Any {
@@ -241,53 +222,43 @@ class Interpreter : Expr.Visitor<Any> {
 
         try {
             while (evaluate(expr.condition) == true) {
-                try { evaluate(expr.body) }
-                catch (_: Continue) {}
-                catch (_: Break) { break }
+                try {
+                    evaluate(expr.body)
+                } catch (_: Continue) {
+                } catch (_: Break) {
+                    break
+                }
             }
         } finally {
             loopState = lastLoopState
         }
 
-        return GUnit()
-    }
-
-    private fun lookUpVariable(name: Token, expr: Expr): Any {
-        val distance = locals[expr]
-        val value = if (distance != null) {
-            environment.getAt(distance, name.lexeme)
-        } else {
-            globals.get(name)
-        }
-
-        return value ?: throw RuntimeError(name, "Undefined variable")
+        return GupUnit()
     }
 
     private fun evaluate(expr: Expr): Any {
-        return environment.recallExpr(expr) ?: expr.accept(this)
+        return expr.accept(this)
     }
 
-    internal fun evaluateBlock(block: Expr.Block, environment: Environment): Any {
-        val previous = this.environment
-        this.environment = environment
+    fun evaluateWithEnv(expr: Expr, env: LexicalScope): Any {
+        val previous = this.env
+        this.env = env
 
-        try {
-            var ret: Any? = null
-            for (expression in block.expressions) {
-                ret = evaluate(expression)
-            }
-
-            return ret ?: GUnit()
+        return try {
+            evaluate(expr)
         } finally {
-            this.environment = previous
+            this.env = previous
         }
     }
 
-    fun resolve(expr: Expr, depth: Int) {
-        locals[expr] = depth
-    }
+    override fun visitBlockExpr(expr: Expr.Block): Any {
+        val previous = this.env
 
-    override fun visitBlockExpr(expr: Expr.Block) {
-        evaluateBlock(expr, Environment(environment))
+        try {
+            val init: Any = GupUnit()
+            return expr.expressions.fold(init) { _, x -> evaluate(x) }
+        } finally {
+            this.env = previous
+        }
     }
 }

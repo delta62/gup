@@ -3,8 +3,15 @@ package types
 import error.TypeError
 
 sealed class Type(val source: TypeSource) {
-    class Any(source: TypeSource): Type(source) {
+    /**
+     * Any type, with no further information available.
+     *
+     * This is a temporary hack until type classes are implemented.
+     */
+    class Any(source: TypeSource) : Type(source) {
         override fun toString(): kotlin.String = "any"
+
+        override fun equals(other: kotlin.Any?) = other is Any && other.source == source
     }
 
     class Bool(source: TypeSource) : Type(source) {
@@ -15,10 +22,23 @@ sealed class Type(val source: TypeSource) {
         override fun toString(): kotlin.String = "double"
     }
 
-    class Function(source: TypeSource, internal val parameters: List<Type>, internal val returnType: Type) : Type(source) {
+    class Function(
+        source: TypeSource,
+        val parameters: kotlin.collections.List<Type>,
+        val returnType: Type
+    ) : Type(source) {
         override fun toString(): kotlin.String {
             val paramTypes = parameters.joinToString(", ") { p -> p.toString() }
             return "function<$paramTypes>: $returnType"
+        }
+    }
+
+    /**
+     * A homogeneous list of items
+     */
+    class List(source: TypeSource, val items: Type) : Type(source) {
+        override fun toString(): kotlin.String {
+            return "list<$items>"
         }
     }
 
@@ -43,10 +63,14 @@ sealed class Type(val source: TypeSource) {
 
     class Unit(source: TypeSource) : Type(source) {
         override fun toString(): kotlin.String = "unit"
+
+        override fun equals(other: kotlin.Any?) = other is Unit && other.source == source
     }
 
     class Unspecified : Type(TypeSource.InferredWeak) {
         override fun toString(): kotlin.String = "unspecified"
+
+        override fun equals(other: kotlin.Any?) = other is Unspecified
     }
 
     fun compatibleWith(other: Type): Boolean {
@@ -64,6 +88,20 @@ sealed class Type(val source: TypeSource) {
             }
 
             return compatibleReturn && compatibleParams
+        }
+
+        if (this is Struct && other is Struct) {
+            var compatibleFields = fields.size == other.fields.size
+            for ((k, v) in fields.entries) {
+                if (!compatibleFields) break
+                compatibleFields = other.fields.containsKey(k) && v.compatibleWith(other.fields[k]!!)
+            }
+
+            return compatibleFields
+        }
+
+        if (this is List && other is List) {
+            return this.items.compatibleWith(other.items)
         }
 
         // Things with the same type are interchangeable
@@ -100,7 +138,11 @@ sealed class Type(val source: TypeSource) {
     }
 
     companion object {
-        fun byName(name: kotlin.String): Type {
+        /**
+         * Convenience function for turning a string literal into a type.
+         * Only works for primitive types
+         */
+        fun parsePrimitive(name: kotlin.String): Type {
             return when (name) {
                 "int" -> Long(TypeSource.Hardcoded)
                 "uint" -> ULong(TypeSource.Hardcoded)

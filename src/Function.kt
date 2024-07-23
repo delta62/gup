@@ -1,22 +1,23 @@
 import generated.Expr
+import types.GupUnit
 
-class Function(private val declaration: Expr.Function, private val closure: Environment) : Callable {
+class Function(private val declaration: Expr.Function, private val closure: LexicalScope) : Callable {
     override fun arity(): Int {
         return declaration.params.size
     }
 
     override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
-        val env = Environment(closure)
+        var env = closure
 
-        for (i in 0..<declaration.params.size) {
-            env.define(declaration.params[i].identifier.lexeme, arguments[i])
+        for (i in declaration.params.indices) {
+            env = env.define(declaration.params[i].identifier.lexeme, arguments[i])
         }
 
         return try {
             val body = Expr.Block(declaration.body)
-            interpreter.evaluateBlock(body, env)
+            interpreter.evaluateWithEnv(body, env)
         } catch(returnValue: Return) {
-            returnValue.value ?: GUnit()
+            returnValue.value ?: GupUnit()
         }
     }
 

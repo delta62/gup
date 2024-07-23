@@ -15,7 +15,8 @@ class RangeTest {
     @Test
     fun singleStepIteratorYieldsMin() {
         val range = IntRange(1, 2)
-        assertThat(range.next()).isEqualTo(1.0)
-        assertThat(range.next()).isNull()
+        val it = range.iterator()
+        assertThat(it.next()).isEqualTo(1.0)
+        assertThat(it.hasNext()).isFalse()
     }
 }

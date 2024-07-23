@@ -4,11 +4,6 @@ enum class TypeSource {
     // NOTE: Order of these types is important to support comparison operators
 
     /**
-     * Functions with no explicit return type aren't even weakly inferred; they're just completely unknown
-     */
-    Unknown,
-
-    /**
      * A weakly inferred type that is subject to change if the compiler gets
      * better information later. For example, `let x = 42` could be an int or
      * a uint.
@@ -16,7 +11,8 @@ enum class TypeSource {
     InferredWeak,
 
     /**
-     * A strongly inferred type that cannot be recalculated as a different type
+     * A strongly inferred type that cannot be recalculated as a different type.
+     * For example, `let x = 3.21` can only be a double.
      */
     InferredStrong,
 

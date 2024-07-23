@@ -1,6 +1,10 @@
 import TokenType.*
 import error.ParseError
 import generated.Expr
+import std.Iterate
+import std.Next
+import types.GupUnit
+import types.GupList
 
 class Parser(private val tokens: List<Token>) {
     private var current: Int = 0
@@ -46,23 +50,49 @@ class Parser(private val tokens: List<Token>) {
         return Expr.Continue(previous())
     }
 
+    /* For loops are desugared into while loops. Given:
+     *
+     * `for x in [0..3]` -> body()
+     *
+     * We'll transform it into:
+     *
+     * do
+     *      let iterator = iterate([0..3])
+     *      let x = next(iterator)
+     *      while x isnt unit
+     *          do
+     *              body()
+     *          end
+     *          x = next(iterator)
+     *      end
+     * end
+     */
     private fun forExpression(): Expr {
+        // First, parse the code as written
         val name = consume(IDENTIFIER, "Expected local binding in for expression")
         val localBinding = TypedIdentifier(name, null)
-
         val inToken = consume(IN, "Expected 'in' in for expression")
         val iterable = expression()
         skipWhitespace()
-        var body = if (match(ARROW)) blockOf(expression()) else block(END)
+        val body = if (match(ARROW)) blockOf(expression()) else block(END)
 
-        val initializer = Expr.Let(localBinding, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
-        val increment = Expr.Assign(name, Expr.Call(Expr.Variable(Token(IDENTIFIER, "next", null, name.line)), inToken, listOf(iterable)))
-        val condition = Expr.Binary(Expr.Variable(name), Token(ISNT, "isnt", null, name.line), Expr.Literal(GUnit()))
+        // Next, build up a parse tree de-sugared down to a while loop
+        val iteratorName = Token(IDENTIFIER, "iterator", null, inToken.location)
+        val iteratorInit = TypedIdentifier(iteratorName, null)
+        val iterableInitializer = Expr.Let(iteratorInit, inlineCall(Iterate.name(), inToken, iterable))
+        val localInitializer = Expr.Let(localBinding, inlineCall(Next.name(), name, Expr.Variable(iteratorName)))
+        val increment = Expr.Assign(name, inlineCall(Next.name(), name, Expr.Variable(iteratorName)))
+        val loopBody = Expr.Block(listOf(body, increment))
+        val condition = Expr.Binary(Expr.Variable(name), Token.isnt(name.location), Expr.Literal(GupUnit()))
+        val loop = Expr.Loop(condition, loopBody)
 
-        body = Expr.Block(listOf(body, increment))
-        val loop = Expr.Loop(condition, body)
+        return Expr.Block(listOf(iterableInitializer, localInitializer, loop))
+    }
 
-        return Expr.Block(listOf(initializer, loop))
+    private fun inlineCall(name: String, token: Token, vararg args: Expr): Expr {
+        val tok = Token(IDENTIFIER, name, null, token.location)
+        val variable = Expr.Variable(tok)
+        return Expr.Call(variable, token, args.toList())
     }
 
     private fun ifExpression(): Expr {
@@ -77,7 +107,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun returnExpression(): Expr {
         val keyword = previous()
-        val value = if (match(NEWLINE)) Expr.Literal(GUnit()) else expression()
+        val value = if (match(NEWLINE)) Expr.Literal(GupUnit()) else expression()
 
         return Expr.Return(keyword, value)
     }
@@ -190,7 +220,7 @@ class Parser(private val tokens: List<Token>) {
         val value = composeLow()
 
         if (expr is Expr.Variable) {
-            val token = Token(desugaredType, lexeme, null, op.line)
+            val token = Token(desugaredType, lexeme, null, op.location)
             val right = Expr.Binary(expr, token, value)
             return Expr.Assign(expr.name, right)
         }
@@ -397,6 +427,7 @@ class Parser(private val tokens: List<Token>) {
     private fun primary(): Expr {
         if (match(FALSE)) return Expr.Literal(false)
         if (match(TRUE)) return Expr.Literal(true)
+        if (match(LEFT_BRACKET)) return listLiteral()
         if (match(FN)) return functionDefinition()
         if (match(INT, UINT, DOUBLE, STRING)) return Expr.Literal(previous().literal!!)
         if (match(IDENTIFIER)) return Expr.Variable(previous())
@@ -428,6 +459,20 @@ class Parser(private val tokens: List<Token>) {
         }
 
         throw error(peek(), "Expected an expression")
+    }
+
+    private fun listLiteral(): Expr {
+        val list = GupList()
+
+        while (!match(RIGHT_BRACKET)) {
+            if (isAtEnd()) error("Expected ']' following list declaration")
+            list.add(expression())
+            if (!match(COMMA)) break
+        }
+
+        consume(RIGHT_BRACKET, "Expected ']' following list declaration")
+
+        return Expr.Literal(list)
     }
 
     private fun functionDefinition(): Expr {

@@ -20,6 +20,15 @@ class Math {
             }
         }
 
+        fun add(x: Any, y: Any): Any {
+            return when (x) {
+                is Long -> x + y as Long
+                is ULong -> x + y as ULong
+                is Double -> x + y as Double
+                else -> throw Unreachable()
+            }
+        }
+
         fun sub(x: Any, y: Any): Any {
             return when (x) {
                 is Long -> x - y as Long
