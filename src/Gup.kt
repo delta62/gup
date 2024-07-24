@@ -84,12 +84,11 @@ class Gup {
 }
 
 fun main(args: Array<String>) {
-    when (args.size) {
-        0 -> Gup.runPrompt()
-        1 -> Gup.runFile(args[0])
-        else -> {
-            println("Usage: sl [script]")
-            exitProcess(64)
-        }
+    if (args.isEmpty()) {
+        println("Usage: gup [script]")
+        exitProcess(64)
     }
+
+    Argv.set(args.drop(1).toList())
+    Gup.runFile(args[0])
 }

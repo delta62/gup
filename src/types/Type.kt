@@ -150,6 +150,7 @@ sealed class Type(val source: TypeSource) {
                 "bool" -> Bool(TypeSource.Hardcoded)
                 "double" -> Double(TypeSource.Hardcoded)
                 "string" -> String(TypeSource.Hardcoded)
+                "List" -> List(TypeSource.Hardcoded, Any(TypeSource.Hardcoded))
                 else -> throw TypeError("Unknown type '$name'")
             }
         }

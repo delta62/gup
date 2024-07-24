@@ -5,6 +5,7 @@ import Interpreter
 import types.FunctionType
 import types.Type
 import types.TypeSource
+import Math
 import kotlin.random.Random
 
 class RandInt : Callable {
@@ -23,8 +24,8 @@ class RandInt : Callable {
     }
 
     override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
-        val min = arguments[0] as Long
-        val max = arguments[1] as Long
+        val min = Math.toLong(arguments[0])
+        val max = Math.toLong(arguments[1])
         return Random.Default.nextLong(min, max)
     }
 }

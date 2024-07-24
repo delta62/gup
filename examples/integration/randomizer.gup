@@ -1,0 +1,11 @@
+fn shuffle(list: List): List
+    let n = len(list)
+    for i in 0..n - 1
+        let j = randInt(i, n)
+        swap(i, j, list)
+    end
+end
+
+let people = args()
+shuffle(people)
+println(people)

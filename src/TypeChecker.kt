@@ -16,6 +16,7 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     init {
+        builtin(Args)
         builtin(AssertEqual)
         builtin(Epoch)
         builtin(Iterate)
@@ -23,6 +24,7 @@ class TypeChecker : Expr.Visitor<Type> {
         builtin(Next)
         builtin(PrintLine)
         builtin(RandInt)
+        builtin(Swap)
         builtin(TypeOf)
     }
 
@@ -179,7 +181,7 @@ class TypeChecker : Expr.Visitor<Type> {
             is GupList -> {
                 val init: Type = Type.Unspecified()
                 val itemType = value.fold(init) { acc, x ->
-                    val resolved = resolve(x)
+                    val resolved = resolve(x as Expr)
                     if (acc == Type.Unspecified()) resolved
                     else acc.merge(resolved)
                 }

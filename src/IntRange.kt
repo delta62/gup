@@ -1,6 +1,6 @@
 class IntRange(private val min: Long, private val max: Long) : Iterable<Long> {
     init {
-        if (max <= min) throw RuntimeException("Max must be >= min")
+        if (max <= min) throw RuntimeException("Max must be > min")
     }
 
     override fun iterator(): Iterator<Long> {

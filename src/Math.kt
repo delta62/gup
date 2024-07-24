@@ -32,8 +32,26 @@ class Math {
         fun sub(x: Any, y: Any): Any {
             return when (x) {
                 is Long -> x - y as Long
-                is ULong -> x - y as ULong
+                is ULong -> x - toULong(y)
                 is Double -> x - y as Double
+                else -> throw Unreachable()
+            }
+        }
+
+        fun toLong(x: Any): Long {
+            return when (x) {
+                is ULong -> x.toLong()
+                is Long -> x
+                is Double -> x.toLong()
+                else -> throw Unreachable()
+            }
+        }
+
+        fun toULong(x: Any): ULong {
+            return when (x) {
+                is ULong -> x
+                is Long -> x.toULong()
+                is Double -> x.toULong()
                 else -> throw Unreachable()
             }
         }

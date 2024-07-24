@@ -9,6 +9,7 @@ import types.GupUnit
 
 class Interpreter : Expr.Visitor<Any> {
     private var env: LexicalScope = LexicalScope.fromEntries(mapOf(
+        Args.name() to Args(),
         AssertEqual.name() to AssertEqual(),
         Epoch.name() to Epoch(),
         Iterate.name() to Iterate(),
@@ -16,6 +17,7 @@ class Interpreter : Expr.Visitor<Any> {
         Next.name() to Next(),
         PrintLine.name() to PrintLine(),
         RandInt.name() to RandInt(),
+        Swap.name() to Swap(),
         TypeOf.name() to TypeOf()
     ))
 
@@ -76,14 +78,22 @@ class Interpreter : Expr.Visitor<Any> {
             }
 
             DOT_DOT, DOT_DOT_EQ -> {
-                if (left is Long && right is Long) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) right - 1 else right
-                    IntRange(left, rangeMax)
-                } else if (left is ULong && right is ULong) {
-                    val rangeMax = if (expr.operator.type == DOT_DOT) right - 1u else right
-                    UIntRange(left, rangeMax)
-                } else {
-                    throw Unreachable()
+                when (left) {
+                    is Long -> {
+                        val r = Math.toLong(right)
+                        val rangeMax = if (expr.operator.type == DOT_DOT) r - 1 else r
+                        IntRange(left, rangeMax)
+                    }
+
+                    is ULong -> {
+                        val r = Math.toULong(right)
+                        val rangeMax = if (expr.operator.type == DOT_DOT) r - 1u else r
+                        UIntRange(left, rangeMax)
+                    }
+
+                    else -> {
+                        throw Unreachable()
+                    }
                 }
             }
 
