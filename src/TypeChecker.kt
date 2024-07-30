@@ -24,6 +24,7 @@ class TypeChecker : Expr.Visitor<Type> {
         builtin(Next)
         builtin(PrintLine)
         builtin(RandInt)
+        builtin(ReadLine)
         builtin(Swap)
         builtin(TypeOf)
     }
@@ -94,7 +95,7 @@ class TypeChecker : Expr.Visitor<Type> {
     }
 
     override fun visitCallExpr(expr: Expr.Call): Type {
-        if (expr.callee !is Expr.Variable) TODO("typing non-identifier functions not implemented yet")
+        if (expr.callee !is Expr.Variable) return Type.Any(TypeSource.Hardcoded) // TODO("typing non-identifier functions not implemented yet")
         val callee = env[expr.callee.name.lexeme]
 
         if (callee !is Type.Function) throw TypeError("Can't call '$callee', not a function")

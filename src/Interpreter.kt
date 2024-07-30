@@ -17,6 +17,7 @@ class Interpreter : Expr.Visitor<Any> {
         Next.name() to Next(),
         PrintLine.name() to PrintLine(),
         RandInt.name() to RandInt(),
+        ReadLine.name() to ReadLine(),
         Swap.name() to Swap(),
         TypeOf.name() to TypeOf()
     ))
@@ -62,8 +63,8 @@ class Interpreter : Expr.Visitor<Any> {
                 val lName = (expr.left as Expr.Variable).name
                 val rName = (expr.right as Expr.Variable).name
 
-                val l = env.get(lName) as Function
-                val r = env.get(rName) as Function
+                val l = env.get(lName) as Callable
+                val r = env.get(rName) as Callable
 
                 return object : Callable {
                     override fun arity(): Int {

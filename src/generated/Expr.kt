@@ -89,6 +89,10 @@ sealed class Expr {
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitLiteralExpr(this)
         }
+
+        override fun toString(): String {
+            return value.toString()
+        }
     }
 
     data class Logical(val left: Expr, val operator: Token, val right: Expr) : Expr() {

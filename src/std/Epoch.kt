@@ -12,9 +12,7 @@ class Epoch : Callable {
         override fun type() = Type.Function(TypeSource.Hardcoded, emptyList(), Type.ULong(TypeSource.Hardcoded))
     }
 
-    override fun arity(): Int {
-        return 0
-    }
+    override fun arity() = 0
 
     override fun call(interpreter: Interpreter, arguments: List<Any>): Any {
         return System.currentTimeMillis().toDouble().toULong()

@@ -4,8 +4,11 @@ fn shuffle(list: List): List
         let j = randInt(i, n)
         swap(i, j, list)
     end
+    list
 end
 
-let people = args()
-shuffle(people)
-println(people)
+let letters = [ "a", "b", "c", "d", "e", "f" ]
+let numbers = [ 1, 2, 3, 4, 5, 6 ]
+
+println . shuffle(letters)
+println . shuffle(numbers)
